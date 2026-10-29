@@ -1212,7 +1212,7 @@ impl App {
                 });
                 ui.label(
                     RichText::new(
-                        "Every command and its full output are appended to happygreasefloppy-DATE.log \
+                        "Every command and its full output are appended to floppy-copy-DATE.log \
                          in this folder (one file per day).",
                     )
                     .small()
@@ -1262,7 +1262,7 @@ impl App {
             ui.add_space(8.0);
             ui.label(
                 RichText::new(format!(
-                    "HappyGreaseFloppy {} — a front-end for Keir Fraser's Greaseweazle host tools. \
+                    "Floppy-Copy {} — Retro Disk Copier. © 2026 RCC(A). A front-end for Keir Fraser's Greaseweazle host tools. \
                      Inspired by FluxMyFluffyFloppy by FrankieTheFluff.",
                     hgf_core::VERSION
                 ))

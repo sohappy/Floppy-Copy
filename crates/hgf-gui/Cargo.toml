@@ -3,12 +3,13 @@ name = "hgf-gui"
 description = "Graphical front-end for the Greaseweazle host tools"
 build = "build.rs"
 version.workspace = true
+authors.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish = false
 
 [[bin]]
-name = "happygreasefloppy"
+name = "floppy-copy"
 path = "src/main.rs"
 
 [dependencies]

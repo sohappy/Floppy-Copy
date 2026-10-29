@@ -2,7 +2,9 @@
   <img src="packaging/icons/128.png" width="96" alt="">
 </p>
 
-<h1 align="center">HappyGreaseFloppy</h1>
+<h1 align="center">Floppy-Copy</h1>
+
+<p align="center"><b>Retro Disk Copier</b></p>
 
 <p align="center">
   <a href="README.md">English</a> · <b>Français</b>
@@ -11,19 +13,20 @@
 <p align="center">
   Une interface graphique conviviale pour les outils <a href="https://github.com/keirf/greaseweazle">Greaseweazle</a> de lecture et d'écriture de disquettes.<br>
   Lire, écrire, copier, formater et diagnostiquer des disquettes — Amiga, PC, Atari ST, Commodore, Apple II, BBC Micro et bien d'autres.<br>
-  Windows · macOS · Linux — <b>v0.17.1</b>
+  Windows · macOS · Linux — <b>v0.18.0</b> — © 2026 RCC(A)
 </p>
 
 <p align="center">
-  <img src="docs/images/read.png" width="860" alt="Lecture d'une disquette Amiga usée : les deux faces piste par piste, 9 pistes récupérées et 3 illisibles, un conseil et la relecture en un clic">
+  <img src="docs/images/retro.png" width="860" alt="L'écran rétro de Floppy-Copy : un DOSCOPY a lu la disquette source, les grilles montrent les pistes bonnes, récupérées et illisibles">
 </p>
 
-HappyGreaseFloppy pilote pour vous les outils Greaseweazle (`gw`). Il couvre toutes les commandes
+Floppy-Copy pilote pour vous les outils Greaseweazle (`gw`). Il couvre toutes les commandes
 `gw`, montre la disquette piste par piste et secteur par secteur pendant la lecture ou l'écriture,
 explique les erreurs en langage clair, et ne lance jamais une opération destructrice sans
 demander confirmation.
 
-*Anciennement FluxMyFluffyFloppy.* L'interface de l'application est en anglais ; les noms de
+*Anciennement HappyGreaseFloppy, et FluxMyFluffyFloppy avant cela.* En plus de l'écran rétro
+ci-dessus, une interface classique donne accès à toutes les options. L'interface de l'application est en anglais ; les noms de
 pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
 
 ## Points forts
@@ -45,6 +48,9 @@ pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
   et un verdict.
 * **Archiver une boîte de disquettes** : numérotation automatique (`disk_001.adf`,
   `disk_002.adf`…), réglages enregistrés par machine, journal de toutes les commandes.
+* **Écran rétro de copieur** : un clic sur *Retro* transforme la fenêtre en copieur plein écran
+  dans l'esprit des copieurs de disquettes classiques de l'Amiga — plaques métalliques, police
+  pixel, voyants des lecteurs, une grille de pistes 0-79 par face, une ligne d'état.
 * Thème sombre, clair ou celui du système ; taille du texte réglable ; la commande `gw` exacte
   affichée avant d'être lancée (Read, Write, Convert, Erase).
 
@@ -52,12 +58,32 @@ pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
 
 | | |
 |---|---|
+| <img src="docs/images/read.png" alt="Interface classique : lecture d'une disquette Amiga usée, les deux faces piste par piste, un conseil et la relecture en un clic"> | <img src="docs/images/write.png" alt="Page Write avec la vérification de compatibilité Amiga"> |
+| **Read disk** (interface classique) — une disquette Amiga usée, avec un conseil et *Re-read the failed tracks* | **Write disk** — avec la vérification de compatibilité Amiga |
 | <img src="docs/images/format.png" alt="Page Format, thème clair : une disquette Commodore 1541 formatée et vérifiée"> | <img src="docs/images/health.png" alt="Drive health : verdict Drive healthy, contrôles et carte de la disquette de référence"> |
 | **Format disk** — une disquette Commodore 1541 vierge, écrite et vérifiée (thème clair) | **Drive health** — contrôle guidé avec un verdict |
-| <img src="docs/images/write.png" alt="Page Write avec la vérification de compatibilité Amiga"> | <img src="docs/images/rpm.png" alt="Drive RPM : 300,63 tr/min avec historique et statistiques"> |
-| **Write disk** — avec la vérification de compatibilité Amiga | **Drive RPM** — vitesse, écart et historique |
-| <img src="docs/images/inspector.png" alt="Image inspector affichant un volume AmigaDOS"> | |
-| **Image inspector** — taille, SHA-256, explorateur AmigaDOS | |
+| <img src="docs/images/rpm.png" alt="Drive RPM : 300,63 tr/min avec historique et statistiques"> | <img src="docs/images/inspector.png" alt="Image inspector affichant un volume AmigaDOS"> |
+| **Drive RPM** — vitesse, écart et historique | **Image inspector** — taille, SHA-256, explorateur AmigaDOS |
+
+### Écran rétro de copieur
+
+L'écran rétro est montré en haut de cette page. *Retro* dans la barre du haut l'affiche, *CLASSIC* revient à l'interface normale. Cliquez sur une
+valeur pour la changer (clic droit : valeur précédente) :
+
+* Modes **COPY** : *DOSCOPY* (secteurs décodés) et *NIBBLE* (flux brut, conserve les protections
+  anticopie), du lecteur source vers le lecteur cible — le même lecteur convient aussi, on vous
+  demande alors d'échanger les disquettes. Modes **TOOLS** : *DISK>IMAGE*, *IMAGE>DISK*,
+  *FORMAT*, *ERASE*, *CHECK* (lecture rapide) et *SPEED* (vitesse de rotation).
+* *START* / *END* (cylindres, avec les flèches), *SIDE* (les deux faces, 0 ou 1), *FORMAT* (les
+  préréglages de machines) et *DEVICE* (le fichier image pour DISK>IMAGE et IMAGE>DISK).
+* Lecteur source : les voyants au-dessus des lecteurs ; lecteur cible : ceux du dessous (ou clic /
+  clic droit sur un lecteur).
+* Dans les grilles, `0` est une piste bonne, un chiffre le nombre de secteurs illisibles, `R` une
+  piste lue après plusieurs essais, `-` une piste vide ; survolez une case pour le détail.
+  *DIRECTORY* liste le contenu d'une image AmigaDOS, *REPEAT* relance la dernière opération,
+  *STOP* (ou `Échap`) l'interrompt.
+
+Un design original : aucun logo, graphisme ou texte d'un programme existant n'est repris.
 
 ## Disquettes prises en charge
 
@@ -66,7 +92,7 @@ types d'image gérés par votre `gw` (environ 150 formats : Amiga, PC, Atari, Co
 Acorn, Amstrad, MSX, Mac, PC-98, TRS-80… ; ADF, IMG, ST, D64, DSK, HFE, SCP, IPF, KryoFlux et
 d'autres). Des préréglages en un clic couvrent les machines courantes.
 
-**Le formatage** (HappyGreaseFloppy construit la disquette vierge, puis l'écrit et la vérifie, ou
+**Le formatage** (Floppy-Copy construit la disquette vierge, puis l'écrit et la vérifie, ou
 l'enregistre comme image) :
 
 | Ordinateur | Disquettes | Vérifié avec |
@@ -93,15 +119,15 @@ Les archives contiennent :
 
 | Système | Archive | Démarrage |
 |---|---|---|
-| Windows 10/11 | `…-windows-x86_64.zip` | Décompressez et lancez `HappyGreaseFloppy.exe`. Décompressez la version officielle des outils Greaseweazle dans le même dossier : `gw` est alors trouvé automatiquement. |
-| macOS 11+ (Apple Silicon et Intel) | `…-macos-universal.zip` | Décompressez et placez `HappyGreaseFloppy.app` dans Applications. L'application n'est pas notariée : la première fois, clic droit → **Ouvrir**. Installez `gw` avec `pip3 install greaseweazle`. |
+| Windows 10/11 | `…-windows-x86_64.zip` | Décompressez et lancez `Floppy-Copy.exe`. Décompressez la version officielle des outils Greaseweazle dans le même dossier : `gw` est alors trouvé automatiquement. |
+| macOS 11+ (Apple Silicon et Intel) | `…-macos-universal.zip` | Décompressez et placez `Floppy-Copy.app` dans Applications. L'application n'est pas notariée : la première fois, clic droit → **Ouvrir**. Installez `gw` avec `pip3 install greaseweazle`. |
 | Linux x86_64 | `…-linux-x86_64.tar.gz` | Extrayez et lancez `./install.sh` (pour l'utilisateur courant, ajoute une entrée de menu). Installez `gw` avec `pip install --user greaseweazle`, et ajoutez-vous au groupe `dialout` pour l'accès USB. |
 
 **`gw` est trouvé automatiquement** : chemin configuré, `PATH`, dossier du programme (et ses
 sous-dossiers `greaseweazle-*`), installations Python de l'utilisateur (`~/.local/bin`, pipx,
 `~/Library/Python/*/bin`, Homebrew) et, sous Windows, les dossiers `Scripts` de Python et les
 dossiers `greaseweazle-*` de Téléchargements, Bureau et Documents. *Settings → Auto-detect*
-relance la recherche ; la variable d'environnement `HGF_GW` impose un chemin.
+relance la recherche ; la variable d'environnement `FLOPPY_COPY_GW` impose un chemin.
 
 ## Premiers pas
 
@@ -118,7 +144,7 @@ relance la recherche ; la variable d'environnement `HGF_GW` impose un chemin.
 5. **Écrire une disquette** : choisissez l'image, vérifiez le format (détecté d'après l'image),
    puis *Write image to disk*. Chaque piste est vérifiée.
 
-Sans matériel, lancez-la avec `HGF_GW=tools/fake-gw.py` (Linux, macOS ; Python 3 nécessaire)
+Sans matériel, lancez-la avec `FLOPPY_COPY_GW=tools/fake-gw.py` (Linux, macOS ; Python 3 nécessaire)
 pour l'essayer avec un simulateur.
 
 ## Les pages
@@ -169,11 +195,11 @@ Desktop en C++ » ; Linux : `gcc`), puis :
 
 ```bash
 cargo build --release -p hgf-gui
-./target/release/happygreasefloppy          # target\release\happygreasefloppy.exe sous Windows
+./target/release/floppy-copy                # target\release\floppy-copy.exe sous Windows
 ```
 
 * Application macOS : `bash packaging/package.sh macos` → `dist/…-macos.zip` contenant
-  `HappyGreaseFloppy.app`.
+  `Floppy-Copy.app`.
 * Entrée de menu et icônes sous Linux : `packaging/linux/install.sh`.
 
 La création des paquets, les tests avec les outils de référence, l'icône et la publication sont
@@ -183,15 +209,16 @@ est dans [CHANGELOG.md](CHANGELOG.md).
 ## Remerciements et licences
 
 * Matériel et outils [Greaseweazle](https://github.com/keirf/greaseweazle) de Keir Fraser —
-  HappyGreaseFloppy ne fait que lancer `gw`, il ne l'inclut pas.
+  Floppy-Copy ne fait que lancer `gw`, il ne l'inclut pas.
 * Inspiré de [FluxMyFluffyFloppy](https://github.com/FrankieTheFluff/FluxMyFluffyFloppy),
   l'interface Windows de FrankieTheFluff (code indépendant).
 * Réalisé avec [egui/eframe](https://github.com/emilk/egui) et les
   [icônes Phosphor](https://phosphoricons.com) ; police
-  [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (SIL Open Font License 1.1, voir
-  `crates/hgf-gui/assets/fonts/JetBrainsMono-OFL.txt`).
+  [JetBrains Mono](https://www.jetbrains.com/lp/mono/) et, sur l'écran rétro,
+  [Silkscreen](https://github.com/googlefonts/silkscreen) (toutes deux sous SIL Open Font
+  License 1.1, voir `crates/hgf-gui/assets/fonts/`).
 * Licences de toutes les bibliothèques utilisées :
   [THIRD-PARTY-LICENSES.txt](THIRD-PARTY-LICENSES.txt).
 
-HappyGreaseFloppy n'a pas encore de licence : c'est un projet personnel, tous droits réservés à
-son auteur.
+Floppy-Copy — Retro Disk Copier — © 2026 RCC(A). Aucune licence n'est accordée pour l'instant :
+projet personnel, tous droits réservés.

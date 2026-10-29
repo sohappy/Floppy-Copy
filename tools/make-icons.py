@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws the HappyGreaseFloppy icon (a disk seen from above, its cylinders as rings) and renders
+"""Draws the Floppy-Copy icon (a disk seen from above, its cylinders as rings) and renders
 every file the three systems need.
 
     python3 tools/make-icons.py            # needs rsvg-convert (librsvg) and Pillow
@@ -48,7 +48,7 @@ def disk(rings, sectors, gap_deg, detail):
     width = pitch * (0.78 if detail else 0.84)
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">',
-        "<title>HappyGreaseFloppy</title>",
+        "<title>Floppy-Copy</title>",
         f'<circle cx="{C}" cy="{C}" r="488" fill="{MEDIA}"/>',
         f'<circle cx="{C}" cy="{C}" r="488" fill="none" stroke="#3a4150" stroke-width="10"/>',
     ]

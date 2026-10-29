@@ -119,6 +119,17 @@ pub fn for_failure(kind: ActionKind, message: &str) -> Option<Hint> {
             &["Update the firmware, then try again."],
             Some(HintAction::OpenUpdate),
         )
+    } else if m.contains("sps/caps library") {
+        hint(
+            "IPF images need the SPS/CAPS library, which is not installed.",
+            &[
+                "Windows: it comes with the official Greaseweazle release; use that gw.exe.",
+                "macOS: copy CAPSImg.framework (Apple Silicon, v5.1) or CAPSImage.framework (Intel, v4.2) to /Library/Frameworks.",
+                "Linux: install libcapsimage.so.4.2 (SPS website) in a system library folder.",
+                "Details: github.com/keirf/greaseweazle/wiki/IPF-Images",
+            ],
+            None,
+        )
     } else if m.contains("is not executable") {
         hint(
             "The program set as gw cannot be run.",
@@ -150,7 +161,7 @@ pub fn for_failure(kind: ActionKind, message: &str) -> Option<Hint> {
         hint(
             "The Greaseweazle host tools (gw) are not installed or not found.",
             &[
-                "Windows: unzip the official release next to HappyGreaseFloppy.",
+                "Windows: unzip the official release next to Floppy-Copy.",
                 "Linux/macOS: pip install greaseweazle.",
                 "Then use Settings → Auto-detect.",
             ],
@@ -227,6 +238,7 @@ mod tests {
             .contains("serial"));
         assert!(title(ActionKind::Info, "'/opt/gw' is not executable (permission denied).")
             .contains("cannot be run"));
+        assert!(title(ActionKind::Write, "Could not find SPS/CAPS library").contains("IPF"));
         assert_eq!(for_failure(ActionKind::Read, "something else"), None);
         assert_eq!(for_failure(ActionKind::Write, "No Index").unwrap().action, Some(HintAction::OpenHealth));
     }

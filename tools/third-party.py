@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Write THIRD-PARTY-LICENSES.txt: the licence of every crate linked into happygreasefloppy.
+"""Write THIRD-PARTY-LICENSES.txt: the licence of every crate linked into floppy-copy.
 
 Usage: python3 tools/third-party.py  (from the repository root, after `cargo fetch`)
 
@@ -36,13 +36,13 @@ def main() -> int:
     crates = sorted((pkgs[i] for i in seen if pkgs[i]["name"] not in OWN),
                     key=lambda p: (p["name"], p["version"]))
     out = [
-        "HappyGreaseFloppy - third-party licences",
+        "Floppy-Copy - third-party licences",
         "=" * 40,
         "",
-        "HappyGreaseFloppy is built with the following Rust crates. Each is used under the licence",
+        "Floppy-Copy is built with the following Rust crates. Each is used under the licence",
         "shown (for dual-licensed crates, the user may choose either). The full texts shipped with",
-        "each crate follow the summary. The JetBrains Mono font is under the SIL Open Font License",
-        "1.1 (JetBrainsMono-OFL.txt).",
+        "each crate follow the summary. The JetBrains Mono and Silkscreen fonts are under the SIL",
+        "Open Font License 1.1 (JetBrainsMono-OFL.txt, Silkscreen-OFL.txt).",
         "",
     ]
     missing = []

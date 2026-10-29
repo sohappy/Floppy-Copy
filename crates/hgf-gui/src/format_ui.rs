@@ -137,7 +137,7 @@ impl App {
                         );
                         ui.add_space(8.0);
                         if widgets::action_button(ui, ph::SPARKLE, "FORMAT DISK", c, !busy && valid) {
-                            self.format_disk();
+                            self.format_disk(None);
                         }
                         ui.add_space(4.0);
                         if ui
@@ -507,7 +507,53 @@ impl App {
         }
     }
 
-    fn format_disk(&mut self) {
+    /// Configure the Format page for a gw format. Returns false when no blank-disk builder exists
+    /// for it.
+    pub(crate) fn select_formatter(&mut self, gw_format: &str) -> bool {
+        use hgf_core::cbmdos::Drive as Cbm;
+        let s = &mut self.s;
+        let fat = |s: &mut crate::app::Settings, k: Kind| {
+            s.format_machine = match k.system() {
+                System::Pc => Machine::Pc,
+                System::AtariSt => Machine::AtariSt,
+                System::Msx => Machine::Msx,
+            };
+            s.format_fat.system = k.system();
+            s.format_fat.kind = k;
+        };
+        match gw_format {
+            "amiga.amigados" | "amiga.amigados_hd" => {
+                s.format_machine = Machine::Amiga;
+                s.format.hd = gw_format.ends_with("_hd");
+            }
+            "commodore.1541" | "commodore.1571" | "commodore.1581" => {
+                s.format_machine = Machine::Commodore;
+                s.format_cbm.drive = match gw_format {
+                    "commodore.1541" => Cbm::D1541,
+                    "commodore.1571" => Cbm::D1571,
+                    _ => Cbm::D1581,
+                };
+            }
+            "apple2.appledos.140" | "apple2.prodos.140" => {
+                s.format_machine = Machine::Apple2;
+                s.format_apple.os =
+                    if gw_format.ends_with("prodos.140") { apple2::Os::ProDos } else { apple2::Os::Dos33 };
+            }
+            "acorn.dfs.ss" | "acorn.dfs.ss80" | "acorn.dfs.ds" | "acorn.dfs.ds80" => {
+                s.format_machine = Machine::Bbc;
+                s.format_dfs.double_sided = gw_format.contains(".ds");
+                s.format_dfs.tracks80 = gw_format.ends_with("80");
+            }
+            f => match Kind::ALL.into_iter().find(|k| k.layout().gw_format == f) {
+                Some(k) => fat(s, k),
+                None => return false,
+            },
+        }
+        true
+    }
+
+    /// Write the blank disk of the Format page, in `drive` (default: the selected one).
+    pub(crate) fn format_disk(&mut self, drive: Option<hgf_core::gw::Drive>) {
         let b = match self.blank() {
             Ok(b) => b,
             Err(e) => return self.notice = Some(e),
@@ -528,6 +574,7 @@ impl App {
             ..Default::default()
         };
         self.next = JobExtras {
+            drive,
             temp: Some(path.clone()),
             page: Some(Page::Format),
             danger: Some(format!("Everything on the disk will be erased and replaced by {what}.")),

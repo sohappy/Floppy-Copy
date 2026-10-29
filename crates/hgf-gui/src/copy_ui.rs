@@ -7,7 +7,7 @@ use crate::widgets::{self, card, PickMode};
 use eframe::egui::{self, RichText, Ui};
 use egui_phosphor::regular as ph;
 use hgf_core::formats::{self, PRESETS};
-use hgf_core::gw::{Action, Drive, ReadOpts, ReadProfile, WriteOpts};
+use hgf_core::gw::{Action, Drive, ReadOpts, ReadProfile, TrackOpts, WriteOpts};
 use hgf_core::hints::Hint;
 use hgf_core::DiskMap;
 use serde::{Deserialize, Serialize};
@@ -26,6 +26,9 @@ pub struct CopySettings {
     /// Optional path where the read image is also kept.
     #[serde(skip)]
     pub keep: PathBuf,
+    /// Track range (TSPEC) for the read and the write; empty = the whole disk.
+    #[serde(skip)]
+    pub tracks: String,
 }
 
 impl Default for CopySettings {
@@ -37,6 +40,7 @@ impl Default for CopySettings {
             destination: Drive::A,
             recovery: false,
             keep: PathBuf::new(),
+            tracks: String::new(),
         }
     }
 }
@@ -74,7 +78,22 @@ pub struct CopyWizard {
 }
 
 impl CopyWizard {
-    fn active(&self) -> bool {
+    /// Unreadable tracks of the source disk.
+    pub fn bad(&self) -> usize {
+        self.bad
+    }
+
+    /// Drive that receives the copy.
+    pub fn destination(&self) -> hgf_core::gw::Drive {
+        self.opts.destination
+    }
+
+    /// Result message of the last copy.
+    pub fn message(&self) -> Option<&str> {
+        self.message.as_deref()
+    }
+
+    pub fn active(&self) -> bool {
         matches!(self.stage, Stage::Reading | Stage::Review | Stage::WaitDestination | Stage::Writing)
     }
 }
@@ -108,7 +127,7 @@ impl App {
         }
     }
 
-    fn copy_start(&mut self) {
+    pub(crate) fn copy_start(&mut self) {
         let o = self.s.copy.clone();
         if o.format.is_empty() && !o.flux {
             return self.notice = Some("Choose the disk format, or tick “Flux copy”.".into());
@@ -127,6 +146,7 @@ impl App {
             output: temp,
             format: o.format.clone(),
             profile: if o.recovery { ReadProfile::Recovery } else { ReadProfile::Standard },
+            tracks: TrackOpts { custom: o.tracks.clone(), ..Default::default() },
             ..Default::default()
         };
         self.copy.pending = Some(Step::Read);
@@ -140,7 +160,7 @@ impl App {
         }
     }
 
-    fn copy_after_read(&mut self) {
+    pub(crate) fn copy_after_read(&mut self) {
         if self.copy.opts.source == self.copy.opts.destination {
             self.copy.stage = Stage::WaitDestination;
         } else {
@@ -148,7 +168,7 @@ impl App {
         }
     }
 
-    fn copy_write(&mut self) {
+    pub(crate) fn copy_write(&mut self) {
         let Some(temp) = self.copy.temp.clone() else {
             return self.copy_abort("The source image is missing.");
         };
@@ -163,7 +183,8 @@ impl App {
             ..Default::default()
         };
         let format = if o.flux { String::new() } else { o.format };
-        self.request(Action::Write(WriteOpts { input: temp, format, ..Default::default() }));
+        let tracks = TrackOpts { custom: o.tracks.clone(), ..Default::default() };
+        self.request(Action::Write(WriteOpts { input: temp, format, tracks, ..Default::default() }));
         if !self.busy() && self.confirm.is_none() {
             let reason = self.notice.clone().unwrap_or_else(|| "The write could not start.".into());
             self.copy.pending = None;

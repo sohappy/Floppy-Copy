@@ -36,7 +36,7 @@ pub fn candidates() -> Vec<PathBuf> {
         }
     }
 
-    // 2. Next to HappyGreaseFloppy (portable bundle), including an unzipped release folder.
+    // 2. Next to Floppy-Copy (portable bundle), including an unzipped release folder.
     if let Some(dir) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
         push(dir.join(EXE));
         for d in subdirs(&dir, "greaseweazle") {

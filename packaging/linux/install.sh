@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs HappyGreaseFloppy for the current user (no root needed): program, menu entry, icon.
+# Installs Floppy-Copy for the current user (no root needed): program, menu entry, icon.
 #
 #   ./install.sh                       from an extracted release archive
 #   packaging/linux/install.sh         from the source tree, after `cargo build --release`
@@ -9,7 +9,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 
 src="${1:-}"
 if [ -z "$src" ]; then
-  for c in "$here/happygreasefloppy" "$here/../../target/release/happygreasefloppy"; do
+  for c in "$here/floppy-copy" "$here/../../target/release/floppy-copy"; do
     if [ -x "$c" ]; then src="$c"; break; fi
   done
 fi
@@ -20,27 +20,33 @@ fi
 # Icons: every hicolor size plus the scalable SVG (release archive: ./icons, source tree: ../icons).
 icondir="$here/icons"
 [ -d "$icondir" ] || icondir="$here/../icons"
-svg="$icondir/happygreasefloppy.svg"
+svg="$icondir/floppy-copy.svg"
 [ -f "$svg" ] || svg="$here/../icon.svg"
 
 bin="$HOME/.local/bin"
 apps="$HOME/.local/share/applications"
 icons="$HOME/.local/share/icons/hicolor"
 mkdir -p "$bin" "$apps"
-install -m 755 "$src" "$bin/happygreasefloppy"
+install -m 755 "$src" "$bin/floppy-copy"
 for png in "$icondir"/*.png; do
   size="$(basename "$png" .png)"
   mkdir -p "$icons/${size}x${size}/apps"
-  install -m 644 "$png" "$icons/${size}x${size}/apps/happygreasefloppy.png"
+  install -m 644 "$png" "$icons/${size}x${size}/apps/floppy-copy.png"
 done
 if [ -f "$svg" ]; then
   mkdir -p "$icons/scalable/apps"
-  install -m 644 "$svg" "$icons/scalable/apps/happygreasefloppy.svg"
+  install -m 644 "$svg" "$icons/scalable/apps/floppy-copy.svg"
 fi
-sed "s|^Exec=.*|Exec=$bin/happygreasefloppy|" "$here/happygreasefloppy.desktop" > "$apps/happygreasefloppy.desktop"
+sed "s|^Exec=.*|Exec=$bin/floppy-copy|" "$here/floppy-copy.desktop" > "$apps/floppy-copy.desktop"
+# Remove an install under the former name (HappyGreaseFloppy), so that the menu has one entry.
+if [ -e "$apps/happygreasefloppy.desktop" ] || [ -e "$bin/happygreasefloppy" ]; then
+  rm -f "$apps/happygreasefloppy.desktop" "$bin/happygreasefloppy"
+  rm -f "$icons"/*/apps/happygreasefloppy.png "$icons"/scalable/apps/happygreasefloppy.svg
+  echo "Removed the former HappyGreaseFloppy menu entry (settings are kept and carried over)."
+fi
 command -v update-desktop-database > /dev/null && update-desktop-database "$apps" || true
 command -v gtk-update-icon-cache > /dev/null && gtk-update-icon-cache -q -t "$icons" || true
-echo "Installed. Start HappyGreaseFloppy from your applications menu (icon included)."
+echo "Installed. Start Floppy-Copy from your applications menu (icon included)."
 if ! command -v gw > /dev/null; then
   echo "Note: the Greaseweazle tools (gw) were not found. Install them with: pip install --user greaseweazle"
 fi

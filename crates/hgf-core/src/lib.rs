@@ -1,4 +1,4 @@
-//! Core of HappyGreaseFloppy.
+//! Core of Floppy-Copy (formerly HappyGreaseFloppy).
 //!
 //! This crate has no GUI dependency. It knows how to:
 //! * describe every Greaseweazle `gw` action and turn it into command-line arguments ([`gw`]);

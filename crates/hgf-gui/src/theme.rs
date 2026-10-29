@@ -62,6 +62,15 @@ pub fn tint(c: Color32, alpha: u8) -> Color32 {
 /// JetBrains Mono (SIL Open Font License, see assets/fonts/JetBrainsMono-OFL.txt).
 const JETBRAINS_MONO: &[u8] = include_bytes!("../assets/fonts/JetBrainsMono-Regular.ttf");
 
+/// Silkscreen Bold, a pixel font for the retro copier screen (SIL Open Font License, see
+/// assets/fonts/Silkscreen-OFL.txt).
+const SILKSCREEN: &[u8] = include_bytes!("../assets/fonts/Silkscreen-Bold.ttf");
+
+/// Font family of the retro copier screen.
+pub fn retro_family() -> FontFamily {
+    FontFamily::Name("retro".into())
+}
+
 /// Text scale chosen in Settings (1.0 = 100 %), stored as f32 bits.
 static TEXT_SCALE: AtomicU32 = AtomicU32::new(0x3f80_0000);
 
@@ -91,6 +100,8 @@ pub fn install_fonts(ctx: &egui::Context) {
     for family in [FontFamily::Proportional, FontFamily::Monospace] {
         fonts.families.entry(family).or_default().insert(0, "jetbrains-mono".into());
     }
+    fonts.font_data.insert("silkscreen".into(), egui::FontData::from_static(SILKSCREEN).into());
+    fonts.families.insert(retro_family(), vec!["silkscreen".into(), "jetbrains-mono".into()]);
     ctx.set_fonts(fonts);
 }
 

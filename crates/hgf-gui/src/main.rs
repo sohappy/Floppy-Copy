@@ -1,4 +1,5 @@
-//! HappyGreaseFloppy — graphical front-end for the Greaseweazle host tools.
+//! Floppy-Copy — Retro Disk Copier. A graphical front-end for the Greaseweazle host tools.
+//! © 2026 RCC(A).
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
@@ -7,20 +8,21 @@ mod copy_ui;
 mod format_ui;
 mod health_ui;
 mod pages;
+mod retro;
 mod templates;
 mod theme;
 mod visualizer;
 mod widgets;
 
-const APP_ID: &str = "happygreasefloppy";
+const APP_ID: &str = "floppy-copy";
 
-/// Bring the settings of FluxMyFluffyFloppy (the former name) over on first start.
+/// Bring the settings of the former names (HappyGreaseFloppy, FluxMyFluffyFloppy) over on first start.
 fn migrate_settings() {
     let Some(new) = eframe::storage_dir(APP_ID) else { return };
     if new.exists() {
         return;
     }
-    for old_id in ["fluxmyfluffyfloppy", "FluxMyFluffyFloppy"] {
+    for old_id in ["happygreasefloppy", "fluxmyfluffyfloppy", "FluxMyFluffyFloppy"] {
         let Some(old) = eframe::storage_dir(old_id) else { continue };
         if old != new && old.is_dir() && copy_dir(&old, &new).is_ok() {
             return;
@@ -43,8 +45,8 @@ fn main() -> eframe::Result {
     migrate_settings();
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
-            .with_title("HappyGreaseFloppy")
-            // Must match packaging/linux/happygreasefloppy.desktop: Wayland desktops
+            .with_title("Floppy-Copy — Retro Disk Copier")
+            // Must match packaging/linux/floppy-copy.desktop: Wayland desktops
             // (GNOME, KDE) take the window icon from the matching installed .desktop file.
             .with_app_id(APP_ID)
             .with_inner_size([1280.0, 880.0])
@@ -57,5 +59,5 @@ fn main() -> eframe::Result {
             }),
         ..Default::default()
     };
-    eframe::run_native("HappyGreaseFloppy", options, Box::new(|cc| Ok(Box::new(app::App::new(cc)))))
+    eframe::run_native("Floppy-Copy", options, Box::new(|cc| Ok(Box::new(app::App::new(cc)))))
 }

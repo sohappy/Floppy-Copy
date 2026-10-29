@@ -2,7 +2,9 @@
   <img src="packaging/icons/128.png" width="96" alt="">
 </p>
 
-<h1 align="center">HappyGreaseFloppy</h1>
+<h1 align="center">Floppy-Copy</h1>
+
+<p align="center"><b>Retro Disk Copier</b></p>
 
 <p align="center">
   <b>English</b> · <a href="README.fr.md">Français</a>
@@ -11,18 +13,19 @@
 <p align="center">
   A friendly desktop front-end for the <a href="https://github.com/keirf/greaseweazle">Greaseweazle</a> floppy disk tools.<br>
   Read, write, copy, format and diagnose floppy disks — Amiga, PC, Atari ST, Commodore, Apple II, BBC Micro and more.<br>
-  Windows · macOS · Linux — <b>v0.17.1</b>
+  Windows · macOS · Linux — <b>v0.18.0</b> — © 2026 RCC(A)
 </p>
 
 <p align="center">
-  <img src="docs/images/read.png" width="860" alt="Reading a worn Amiga disk: both sides track by track, 9 recovered and 3 bad tracks, a hint and a one-click re-read">
+  <img src="docs/images/retro.png" width="860" alt="Floppy-Copy's retro copier screen: a DOSCOPY has read the source disk, the track grids show good, recovered and bad tracks">
 </p>
 
-HappyGreaseFloppy drives the Greaseweazle host tools (`gw`) for you. It covers every `gw`
+Floppy-Copy drives the Greaseweazle host tools (`gw`) for you. It covers every `gw`
 command, shows the disk track by track and sector by sector while it is read or written, explains
 errors in plain language, and never runs a destructive operation without asking first.
 
-*Formerly FluxMyFluffyFloppy.*
+*Formerly HappyGreaseFloppy, and FluxMyFluffyFloppy before that.* Besides the retro copier
+screen above, a classic interface gives access to every option.
 
 ## Highlights
 
@@ -39,6 +42,9 @@ errors in plain language, and never runs a destructive operation without asking 
   if it fails), optional write test, and a verdict.
 * **Archive a box of disks**: automatic numbering (`disk_001.adf`, `disk_002.adf`…), saved
   settings per machine, a log file of every command.
+* **Retro copier screen**: one click on *Retro* turns the window into a full-screen copier in the
+  spirit of the classic Amiga disk copiers — metal plates, pixel font, drive lamps, one 0-79 track
+  grid per side, a status line.
 * Dark, light or system theme; adjustable text size; the exact `gw` command shown before it runs
   (Read, Write, Convert, Erase).
 
@@ -46,12 +52,31 @@ errors in plain language, and never runs a destructive operation without asking 
 
 | | |
 |---|---|
+| <img src="docs/images/read.png" alt="Classic interface: reading a worn Amiga disk, both sides track by track, a hint and a one-click re-read"> | <img src="docs/images/write.png" alt="Write page with the Amiga compatibility check"> |
+| **Read disk** (classic interface) — a worn Amiga disk, with a hint and *Re-read the failed tracks* | **Write disk** — with the Amiga compatibility check |
 | <img src="docs/images/format.png" alt="Format page, light theme: a Commodore 1541 disk formatted and verified"> | <img src="docs/images/health.png" alt="Drive health: verdict Drive healthy, checks and the reference disk map"> |
 | **Format disk** — a blank Commodore 1541 disk, written and verified (light theme) | **Drive health** — guided check with a verdict |
-| <img src="docs/images/write.png" alt="Write page with the Amiga compatibility check"> | <img src="docs/images/rpm.png" alt="Drive RPM: 300.63 rpm with history chart and statistics"> |
-| **Write disk** — with the Amiga compatibility check | **Drive RPM** — speed, deviation and history |
-| <img src="docs/images/inspector.png" alt="Image inspector showing an AmigaDOS volume"> | |
-| **Image inspector** — size, SHA-256, AmigaDOS explorer | |
+| <img src="docs/images/rpm.png" alt="Drive RPM: 300.63 rpm with history chart and statistics"> | <img src="docs/images/inspector.png" alt="Image inspector showing an AmigaDOS volume"> |
+| **Drive RPM** — speed, deviation and history | **Image inspector** — size, SHA-256, AmigaDOS explorer |
+
+### Retro copier screen
+
+The retro screen is shown at the top of this page. *Retro* in the top bar switches to it, *CLASSIC* switches back. Click a value to change it (right
+click: previous value):
+
+* **COPY** modes: *DOSCOPY* (decoded sectors) and *NIBBLE* (raw flux, keeps copy protections),
+  from the source drive to the target drive — the same drive works too, you are asked to swap
+  disks. **TOOLS** modes: *DISK>IMAGE*, *IMAGE>DISK*, *FORMAT*, *ERASE*, *CHECK* (quick scan) and
+  *SPEED* (RPM).
+* *START* / *END* (cylinders, with the arrows), *SIDE* (both, 0 or 1), *FORMAT* (the machine
+  presets) and *DEVICE* (the image file for DISK>IMAGE and IMAGE>DISK).
+* Source drives: the lamps above the drives; target drives: the lamps below (or click / right
+  click a drive).
+* In the grids, `0` is a good track, a digit the number of unreadable sectors, `R` a track read
+  after retries, `-` an empty track; hover a cell for details. *DIRECTORY* lists an AmigaDOS
+  image, *REPEAT* runs the last operation again, *STOP* (or `Esc`) interrupts it.
+
+An original design: no logo, artwork or text of an existing program is used.
 
 ## Supported disks
 
@@ -60,7 +85,7 @@ installed `gw` supports (about 150 formats: Amiga, PC, Atari, Commodore, Apple, 
 MSX, Mac, PC-98, TRS-80…; ADF, IMG, ST, D64, DSK, HFE, SCP, IPF, KryoFlux and more). One-click
 presets cover the common machines.
 
-**Formatting** (blank disk built by HappyGreaseFloppy, then written and verified, or saved as an
+**Formatting** (blank disk built by Floppy-Copy, then written and verified, or saved as an
 image):
 
 | Computer | Disks | Checked against |
@@ -86,15 +111,15 @@ The archives contain:
 
 | System | Archive | How to start |
 |---|---|---|
-| Windows 10/11 | `…-windows-x86_64.zip` | Unzip and run `HappyGreaseFloppy.exe`. Unzip the official Greaseweazle tools release in the same folder: `gw` is then found automatically. |
-| macOS 11+ (Apple Silicon and Intel) | `…-macos-universal.zip` | Unzip and move `HappyGreaseFloppy.app` to Applications. The app is not notarised: the first time, right-click → **Open**. Install `gw` with `pip3 install greaseweazle`. |
+| Windows 10/11 | `…-windows-x86_64.zip` | Unzip and run `Floppy-Copy.exe`. Unzip the official Greaseweazle tools release in the same folder: `gw` is then found automatically. |
+| macOS 11+ (Apple Silicon and Intel) | `…-macos-universal.zip` | Unzip and move `Floppy-Copy.app` to Applications. The app is not notarised: the first time, right-click → **Open**. Install `gw` with `pip3 install greaseweazle`. |
 | Linux x86_64 | `…-linux-x86_64.tar.gz` | Extract and run `./install.sh` (current user, adds a menu entry). Install `gw` with `pip install --user greaseweazle`, and add yourself to the `dialout` group for USB access. |
 
 **`gw` is found automatically**: configured path, `PATH`, the program's folder (and
 `greaseweazle-*` sub-folders), Python user installs (`~/.local/bin`, pipx,
 `~/Library/Python/*/bin`, Homebrew) and, on Windows, Python `Scripts` folders and
 `greaseweazle-*` folders in Downloads, Desktop and Documents. *Settings → Auto-detect* searches
-again; the `HGF_GW` environment variable forces a path.
+again; the `FLOPPY_COPY_GW` environment variable forces a path.
 
 ## Getting started
 
@@ -110,7 +135,7 @@ again; the `HGF_GW` environment variable forces a path.
 5. **Write a disk**: choose the image, check the format (detected from the image), then *Write
    image to disk*. Every track is verified.
 
-Without hardware, start it with `HGF_GW=tools/fake-gw.py` (Linux, macOS; needs Python 3) to try
+Without hardware, start it with `FLOPPY_COPY_GW=tools/fake-gw.py` (Linux, macOS; needs Python 3) to try
 it against a simulator.
 
 ## Pages
@@ -159,11 +184,11 @@ with C++"; Linux: `gcc`), then:
 
 ```bash
 cargo build --release -p hgf-gui
-./target/release/happygreasefloppy          # target\release\happygreasefloppy.exe on Windows
+./target/release/floppy-copy                # target\release\floppy-copy.exe on Windows
 ```
 
 * macOS application: `bash packaging/package.sh macos` → `dist/…-macos.zip` with
-  `HappyGreaseFloppy.app`.
+  `Floppy-Copy.app`.
 * Linux menu entry and icons: `packaging/linux/install.sh`.
 
 Packaging, tests against reference tools, the icon and the release workflow are described in
@@ -173,14 +198,15 @@ Packaging, tests against reference tools, the icon and the release workflow are 
 ## Credits and licences
 
 * [Greaseweazle](https://github.com/keirf/greaseweazle) hardware and host tools by Keir Fraser —
-  HappyGreaseFloppy only runs `gw`, it does not include it.
+  Floppy-Copy only runs `gw`, it does not include it.
 * Inspired by [FluxMyFluffyFloppy](https://github.com/FrankieTheFluff/FluxMyFluffyFloppy), the
   Windows GUI by FrankieTheFluff (independent code).
 * Built with [egui/eframe](https://github.com/emilk/egui) and
   [Phosphor icons](https://phosphoricons.com); text in
-  [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (SIL Open Font License 1.1, see
-  `crates/hgf-gui/assets/fonts/JetBrainsMono-OFL.txt`).
+  [JetBrains Mono](https://www.jetbrains.com/lp/mono/) and, on the retro screen,
+  [Silkscreen](https://github.com/googlefonts/silkscreen) (both under the SIL Open Font
+  License 1.1, see `crates/hgf-gui/assets/fonts/`).
 * Third-party licences of every library: [THIRD-PARTY-LICENSES.txt](THIRD-PARTY-LICENSES.txt).
 
-HappyGreaseFloppy itself has no licence yet: it is a personal project, all rights reserved by
-its author.
+Floppy-Copy — Retro Disk Copier — © 2026 RCC(A). No licence is granted yet: a personal
+project, all rights reserved.

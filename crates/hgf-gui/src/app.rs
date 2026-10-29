@@ -178,6 +178,8 @@ pub struct Settings {
     pub format_apple: hgf_core::apple2::AppleOpts,
     /// Double step for 40-track formats in an 80-track 5.25" drive.
     pub format_double_step: bool,
+    /// Retro copier screen.
+    pub retro: crate::retro::RetroSettings,
     /// Automatic numbering of read images (`disk_001.adf`…).
     pub read_naming: hgf_core::naming::Numbering,
     /// Saved Read / Write settings.
@@ -234,6 +236,7 @@ impl Default for Settings {
             format_dfs: Default::default(),
             format_apple: Default::default(),
             format_double_step: false,
+            retro: Default::default(),
             read_naming: Default::default(),
             templates: Vec::new(),
             log_dir: String::new(),
@@ -377,6 +380,9 @@ pub struct App {
     pub ports: Option<Vec<hgf_core::ports::Port>>,
     /// An operation ended: ask the desktop for attention on the next frame.
     attention: bool,
+    last_duration: Option<Duration>,
+    /// State of the retro copier screen (not persisted).
+    pub retro: crate::retro::RetroState,
     pub catalog: Catalog,
     catalog_rx: Option<Receiver<Result<Catalog, String>>>,
     detect_rx: Option<Receiver<Option<String>>>,
@@ -422,8 +428,8 @@ impl App {
         let s: Settings =
             cc.storage.and_then(|st| eframe::get_value(st, eframe::APP_KEY)).unwrap_or_default();
         let mut s = s;
-        // HGF_GW overrides the gw executable (handy for portable installs and testing).
-        if let Ok(p) = std::env::var("HGF_GW") {
+        // FLOPPY_COPY_GW (or the former HGF_GW) overrides the gw executable (portable installs, tests).
+        if let Ok(p) = std::env::var("FLOPPY_COPY_GW").or_else(|_| std::env::var("HGF_GW")) {
             s.cfg.program = p;
         }
         theme::apply(&cc.egui_ctx, s.theme_choice(), s.text_scale);
@@ -458,6 +464,8 @@ impl App {
             template_selected: [None, None],
             ports: None,
             attention: false,
+            last_duration: None,
+            retro: Default::default(),
             confirm: None,
             outcome: None,
             notice: None,
@@ -470,10 +478,20 @@ impl App {
             map_page: Page::Read,
             close_requested: false,
         };
-        app.console.push(format!("HappyGreaseFloppy {} ready.", hgf_core::VERSION), Level::Good);
+        app.console.push(format!("Floppy-Copy {} ready.", hgf_core::VERSION), Level::Good);
         remove_stale_temps();
         app.detect_gw(app.s.probe_on_start);
         app
+    }
+
+    /// Kind and elapsed time of the running operation.
+    pub fn running(&self) -> Option<(ActionKind, Duration)> {
+        self.running.as_ref().map(|r| (r.kind, r.started.elapsed()))
+    }
+
+    /// Duration of the last finished operation.
+    pub fn last_duration(&self) -> Option<Duration> {
+        self.last_duration
     }
 
     pub fn busy(&self) -> bool {
@@ -808,6 +826,7 @@ impl App {
             _ if success => self.device.state = DeviceState::Connected,
             _ => {}
         }
+        self.last_duration = Some(r.started.elapsed());
         let secs = r.started.elapsed().as_secs_f32();
         let failure_text = r.failure.clone();
         let (level, message) = if cancelled {
@@ -1051,8 +1070,17 @@ impl App {
     fn top_bar(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             ui.add(egui::Image::new(&self.logo).fit_to_exact_size(egui::vec2(28.0, 28.0)));
-            ui.label(RichText::new("HappyGreaseFloppy").size(theme::fs(20.0)).strong());
+            ui.label(RichText::new("Floppy-Copy").size(theme::fs(20.0)).strong());
+            ui.label(RichText::new("Retro Disk Copier").color(theme::MUTED));
             ui.label(RichText::new(format!("v{}", hgf_core::VERSION)).color(theme::MUTED));
+            ui.add_space(8.0);
+            if ui
+                .button(format!("{}  Retro", ph::MONITOR))
+                .on_hover_text("Retro copier screen, in the spirit of the classic Amiga disk copiers")
+                .clicked()
+            {
+                self.s.retro.enabled = true;
+            }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let (txt, col) = match self.device.state {
                     DeviceState::Connected => {
@@ -1523,7 +1551,7 @@ pub const SAVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5)
 /// Cached AmigaDOS analysis: path, size, modification time, result.
 pub type WriteAdf = (PathBuf, u64, Option<std::time::SystemTime>, Result<hgf_core::image::AdfInfo, String>);
 
-/// Append one operation to the day's log file (`happygreasefloppy-YYYY-MM-DD.log`, UTC dates).
+/// Append one operation to the day's log file (`floppy-copy-YYYY-MM-DD.log`, UTC dates).
 fn write_log(dir: &str, lines: &[String]) -> std::io::Result<()> {
     use std::io::Write;
     let now =
@@ -1531,7 +1559,7 @@ fn write_log(dir: &str, lines: &[String]) -> std::io::Result<()> {
     let (y, mo, d, h, mi, se) = hgf_core::fat12::utc(now);
     let dir = PathBuf::from(dir.trim());
     std::fs::create_dir_all(&dir)?;
-    let path = dir.join(format!("happygreasefloppy-{y:04}-{mo:02}-{d:02}.log"));
+    let path = dir.join(format!("floppy-copy-{y:04}-{mo:02}-{d:02}.log"));
     let mut f = std::fs::OpenOptions::new().create(true).append(true).open(path)?;
     writeln!(f, "==== {y:04}-{mo:02}-{d:02} {h:02}:{mi:02}:{se:02} UTC ====")?;
     for l in lines {
@@ -1599,6 +1627,16 @@ impl eframe::App for App {
             ctx.request_repaint_after(Duration::from_millis(50));
         }
         self.handle_drops(&ctx);
+
+        if self.s.retro.enabled {
+            egui::CentralPanel::default().frame(egui::Frame::new().fill(Color32::BLACK)).show(ui, |ui| {
+                self.retro_screen(ui);
+            });
+            self.confirm_dialog(&ctx);
+            self.close_guard(&ctx);
+            self.drop_overlay(&ctx);
+            return;
+        }
 
         egui::Panel::top("top")
             .frame(

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Floppy-Copy
+GenericName=Retro Disk Copier
+Comment=Copy, read, write and format floppy disks with a Greaseweazle
+Exec=floppy-copy
+Icon=floppy-copy
+StartupWMClass=floppy-copy
+Terminal=false
+Categories=Utility;System;

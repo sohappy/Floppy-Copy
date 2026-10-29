@@ -3,42 +3,42 @@
 set -euo pipefail
 name="$1"
 version="${2:-dev}"
-app="HappyGreaseFloppy"
+app="Floppy-Copy"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 mkdir -p dist
 dir="$app-$version-$name"
 rm -rf "$dir"
 
-# The embedded JetBrains Mono font is under the SIL OFL, whose text must ship with it.
+# The embedded fonts (JetBrains Mono, Silkscreen) are under the SIL OFL, whose text must ship with them.
 add_licences() {
-  cp crates/hgf-gui/assets/fonts/JetBrainsMono-OFL.txt THIRD-PARTY-LICENSES.txt "$1/"
+  cp crates/hgf-gui/assets/fonts/JetBrainsMono-OFL.txt crates/hgf-gui/assets/fonts/Silkscreen-OFL.txt THIRD-PARTY-LICENSES.txt "$1/"
 }
 
 case "$name" in
   linux-*)
     mkdir -p "$dir"
-    cp target/release/happygreasefloppy "$dir/happygreasefloppy"
+    cp target/release/floppy-copy "$dir/floppy-copy"
     cp -r packaging/icons "$dir/icons"
-    cp packaging/icon.svg "$dir/icons/happygreasefloppy.svg"
-    cp packaging/linux/happygreasefloppy.desktop packaging/linux/install.sh README.md README.fr.md "$dir/"
-    chmod +x "$dir/happygreasefloppy" "$dir/install.sh"
+    cp packaging/icon.svg "$dir/icons/floppy-copy.svg"
+    cp packaging/linux/floppy-copy.desktop packaging/linux/install.sh README.md README.fr.md "$dir/"
+    chmod +x "$dir/floppy-copy" "$dir/install.sh"
     add_licences "$dir"
     tar czf "dist/$dir.tar.gz" "$dir"
     ;;
   windows-*)
     mkdir -p "$dir"
-    cp target/release/happygreasefloppy.exe "$dir/$app.exe"
+    cp target/release/floppy-copy.exe "$dir/$app.exe"
     cp README.md README.fr.md "$dir/"
     add_licences "$dir"
     cat > "$dir/GREASEWEAZLE.txt" <<'TXT'
-HappyGreaseFloppy needs the Greaseweazle host tools (gw.exe).
+Floppy-Copy needs the Greaseweazle host tools (gw.exe).
 
 Easiest: unzip the official Windows release of the Greaseweazle tools
 (https://github.com/keirf/greaseweazle/releases) into this folder, so that you get
-    HappyGreaseFloppy.exe
+    Floppy-Copy.exe
     greaseweazle-x.y\gw.exe
-HappyGreaseFloppy finds it automatically. It also finds gw.exe on the PATH,
+Floppy-Copy finds it automatically. It also finds gw.exe on the PATH,
 in Python "Scripts" folders, and in greaseweazle-* folders in Downloads,
 Desktop or Documents. Otherwise set its location in Settings.
 TXT
@@ -48,8 +48,8 @@ TXT
     bundle="$dir/$app.app"
     mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources"
     # Universal binary from the release workflow, or a plain `cargo build --release` on a Mac.
-    bin=target/universal/happygreasefloppy
-    [ -x "$bin" ] || bin=target/release/happygreasefloppy
+    bin=target/universal/floppy-copy
+    [ -x "$bin" ] || bin=target/release/floppy-copy
     cp "$bin" "$bundle/Contents/MacOS/$app"
     sed "s/@VERSION@/${version#v}/g" packaging/macos/Info.plist > "$bundle/Contents/Info.plist"
     cp packaging/icon.icns "$bundle/Contents/Resources/AppIcon.icns"

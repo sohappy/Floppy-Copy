@@ -774,11 +774,22 @@ impl Action {
                 if let Some(sizes) = formats::expected_size(&o.format) {
                     let sector_image = !formats::FLUX_SUFFIXES.contains(&ext.as_str())
                         && ["adf", "img", "ima", "st"].contains(&ext.as_str());
-                    if sector_image && !sizes.contains(&size) {
+                    let list = sizes.iter().map(u64::to_string).collect::<Vec<_>>().join(" or ");
+                    let min = sizes.iter().copied().min().unwrap_or(0);
+                    if sector_image && size < min {
+                        // Truncated image, or the wrong format: the disk would be incomplete.
                         return Err(format!(
-                            "Image size {size} bytes does not match format {} (expected {}).",
-                            o.format,
-                            sizes.iter().map(u64::to_string).collect::<Vec<_>>().join(" or ")
+                            "Image size {size} bytes is smaller than format {} needs ({list}).",
+                            o.format
+                        ));
+                    }
+                    // Larger is common (e.g. 82-track Atari ST images): gw writes the tracks the
+                    // format defines. The user sees the warning before confirming.
+                    if sector_image && !sizes.contains(&size) {
+                        warnings.push(format!(
+                            "Image size {size} bytes differs from the usual size for {} ({}): check \
+                             that the format is right. gw writes the tracks the format defines.",
+                            o.format, list
                         ));
                     }
                 }
@@ -996,7 +1007,13 @@ mod tests {
             format: "amiga.amigados".into(),
             ..Default::default()
         });
-        assert!(w.validate(&Catalog::default()).unwrap_err().contains("size"));
+        assert!(w.validate(&Catalog::default()).unwrap_err().contains("smaller"));
+        // An 82-track Atari ST image is accepted, with a warning.
+        let st = dir.join("game.st");
+        std::fs::write(&st, vec![0u8; 82 * 2 * 9 * 512]).unwrap();
+        let w = Action::Write(WriteOpts { input: st, format: "atarist.720".into(), ..Default::default() });
+        let warnings = w.validate(&Catalog::default()).unwrap();
+        assert!(warnings.iter().any(|m| m.contains("755712")), "{warnings:?}");
         std::fs::remove_dir_all(&dir).ok();
     }
 }

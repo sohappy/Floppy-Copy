@@ -1,6 +1,33 @@
 # Changelog
 
-All notable changes to HappyGreaseFloppy (formerly FluxMyFluffyFloppy).
+All notable changes to Floppy-Copy (formerly HappyGreaseFloppy, and FluxMyFluffyFloppy before that).
+
+## v0.18.0
+
+* **Renamed Floppy-Copy — Retro Disk Copier**, © 2026 RCC(A). Window title, retro screen
+  (title, subtitle and copyright plate), About line, Windows and macOS metadata, archives
+  (`Floppy-Copy.exe`, `Floppy-Copy.app`, `floppy-copy` on Linux).
+* Settings, saved templates and the window position of HappyGreaseFloppy (and of
+  FluxMyFluffyFloppy) are carried over on first start. On Linux, `install.sh` replaces the former
+  menu entry.
+* `FLOPPY_COPY_GW` sets the gw executable (`HGF_GW` still works); log files are named
+  `floppy-copy-DATE.log`.
+
+## v0.17.2
+
+* **Retro copier screen** (*Retro* in the top bar, *CLASSIC* to go back): a full-window
+  interface in the spirit of the classic Amiga disk copiers, with metal plates, a pixel font
+  (Silkscreen, SIL OFL), source and target drive lamps, one 0-79 track grid per side and a
+  status line. Modes DOSCOPY, NIBBLE, DISK>IMAGE, IMAGE>DISK, FORMAT, ERASE, CHECK and SPEED,
+  with START/END cylinders and SIDE; DIRECTORY lists AmigaDOS images, REPEAT runs the last
+  operation again. It drives the same jobs and confirmations as the classic interface.
+* Copy disk: track range support (used by the retro screen).
+
+* Write: an image larger than the usual size of its format (for example an 82-track Atari ST
+  `.st` image) is no longer refused: a warning in the confirmation says so, and gw writes the
+  tracks the format defines. A smaller (truncated) image is still refused.
+* Hint for IPF images when the SPS/CAPS library gw needs is not installed, with where to put it
+  on Windows, macOS and Linux.
 
 ## v0.17.1
 

@@ -1532,7 +1532,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hgf-core"
-version = "0.17.1"
+version = "0.18.0"
 dependencies = [
  "hex",
  "libc",
@@ -1544,7 +1544,7 @@ dependencies = [
 
 [[package]]
 name = "hgf-gui"
-version = "0.17.1"
+version = "0.18.0"
 dependencies = [
  "eframe",
  "egui-phosphor",

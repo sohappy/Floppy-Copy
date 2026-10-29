@@ -14,7 +14,7 @@
 ```bash
 cargo test --workspace
 cargo build --release -p hgf-gui
-./target/release/happygreasefloppy          # target\release\happygreasefloppy.exe on Windows
+./target/release/floppy-copy                # target\release\floppy-copy.exe on Windows
 ```
 
 The first build downloads and compiles every dependency (5 to 10 minutes); later builds are
@@ -24,7 +24,7 @@ incremental.
 
 ```bash
 cargo build --release -p hgf-gui
-bash packaging/package.sh macos            # → dist/HappyGreaseFloppy-dev-macos.zip with the .app
+bash packaging/package.sh macos            # → dist/Floppy-Copy-dev-macos.zip with the .app
 ```
 
 The device appears as `/dev/cu.usbmodem…` (auto-detected, or chosen in Settings).
@@ -32,7 +32,7 @@ The device appears as `/dev/cu.usbmodem…` (auto-detected, or chosen in Setting
 ### Linux menu entry and icon
 
 Wayland desktops (GNOME, KDE) show the icon of the installed `.desktop` file whose name matches
-the application id (`happygreasefloppy`), not the icon embedded in the window:
+the application id (`floppy-copy`), not the icon embedded in the window:
 
 ```bash
 cargo build --release -p hgf-gui
@@ -46,7 +46,7 @@ Amiga disk for `read`, a verify retry for `write`, live `align` reads, `clean` p
 `update`, and so on. `convert` is forwarded to the real `gw` when it is installed.
 
 ```bash
-HGF_GW=$PWD/tools/fake-gw.py ./target/release/happygreasefloppy
+FLOPPY_COPY_GW=$PWD/tools/fake-gw.py ./target/release/floppy-copy
 ```
 
 `FAKE_LOG=/tmp/gw.log` records every command line the application runs; `FAKE_VERIFY_FAIL=1`,
@@ -79,8 +79,8 @@ reference implementations when these are installed (the tests are skipped otherw
 * `.github/workflows/ci.yml`: `fmt` and `clippy` on Linux, build and tests on Linux, Windows and
   macOS, on every push and pull request.
 * `.github/workflows/release.yml`: *Actions → Release → Run workflow* builds the three archives
-  as downloadable artifacts, without publishing anything. Pushing a tag such as `v0.17.1`
-  (`git tag v0.17.1 && git push origin v0.17.1`) also publishes them as a GitHub release:
+  as downloadable artifacts, without publishing anything. Pushing a tag such as `v0.18.0`
+  (`git tag v0.18.0 && git push origin v0.18.0`) also publishes them as a GitHub release:
   Windows x86_64 (with embedded icon), macOS universal `.app`, Linux x86_64 (built on
   Ubuntu 22.04 for broad glibc compatibility).
 
@@ -95,7 +95,7 @@ and `icon-small.svg` for 16-24 px) and renders every file below (needs `rsvg-con
 |---|---|---|
 | Linux | `packaging/icons/<size>.png` (16-512) + `icon.svg` | `install.sh` → `~/.local/share/icons/hicolor` |
 | Windows | `packaging/icon.ico` (16-256) | embedded in the `.exe` by `build.rs` |
-| macOS | `packaging/icon.icns` (16-1024) | `HappyGreaseFloppy.app` |
+| macOS | `packaging/icon.icns` (16-1024) | `Floppy-Copy.app` |
 | All | `crates/hgf-gui/assets/icon128.rgba` | window icon and title-bar logo |
 
 ## Project layout

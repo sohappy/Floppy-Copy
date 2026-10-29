@@ -290,7 +290,7 @@ impl App {
     fn health_report(&self) -> String {
         let h = &self.health;
         let mut s = format!(
-            "HappyGreaseFloppy {} — drive health check\nDrive: {}   Reference format: {}\n\n",
+            "Floppy-Copy {} — drive health check\nDrive: {}   Reference format: {}\n\n",
             hgf_core::VERSION,
             self.s.drive.label(),
             h.format

@@ -2,10 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleName</key><string>HappyGreaseFloppy</string>
-  <key>CFBundleDisplayName</key><string>HappyGreaseFloppy</string>
-  <key>CFBundleIdentifier</key><string>io.github.happygreasefloppy</string>
-  <key>CFBundleExecutable</key><string>HappyGreaseFloppy</string>
+  <key>CFBundleName</key><string>Floppy-Copy</string>
+  <key>CFBundleDisplayName</key><string>Floppy-Copy</string>
+  <key>CFBundleIdentifier</key><string>io.github.floppy-copy</string>
+  <key>CFBundleExecutable</key><string>Floppy-Copy</string>
+  <key>CFBundleGetInfoString</key><string>Floppy-Copy — Retro Disk Copier</string>
+  <key>NSHumanReadableCopyright</key><string>© 2026 RCC(A)</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>@VERSION@</string>
