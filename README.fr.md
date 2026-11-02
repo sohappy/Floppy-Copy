@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/retro.png" width="860" alt="L'écran rétro de Floppy-Copy : un DOSCOPY a lu la disquette source, les grilles montrent les pistes bonnes, récupérées et illisibles">
+  <img src="docs/images/read.png" width="860" alt="L'interface classique de Floppy-Copy : lecture d'une disquette Amiga usée, les deux faces piste par piste, un conseil et la relecture en un clic">
 </p>
 
 Floppy-Copy pilote pour vous les outils Greaseweazle (`gw`). Il couvre toutes les commandes
@@ -25,8 +25,8 @@ Floppy-Copy pilote pour vous les outils Greaseweazle (`gw`). Il couvre toutes le
 explique les erreurs en langage clair, et ne lance jamais une opération destructrice sans
 demander confirmation.
 
-*Anciennement HappyGreaseFloppy, et FluxMyFluffyFloppy avant cela.* En plus de l'écran rétro
-ci-dessus, une interface classique donne accès à toutes les options. L'interface de l'application est en anglais ; les noms de
+*Anciennement HappyGreaseFloppy, et FluxMyFluffyFloppy avant cela.* Un écran rétro de copieur,
+dans l'esprit des copieurs classiques de l'Amiga, est aussi proposé : voir [la fin de cette page](#écran-rétro-de-copieur). L'interface de l'application est en anglais ; les noms de
 pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
 
 ## Points forts
@@ -48,9 +48,6 @@ pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
   et un verdict.
 * **Archiver une boîte de disquettes** : numérotation automatique (`disk_001.adf`,
   `disk_002.adf`…), réglages enregistrés par machine, journal de toutes les commandes.
-* **Écran rétro de copieur** : un clic sur *Retro* transforme la fenêtre en copieur plein écran
-  dans l'esprit des copieurs de disquettes classiques de l'Amiga — plaques métalliques, police
-  pixel, voyants des lecteurs, une grille de pistes 0-79 par face, une ligne d'état.
 * **Protège les lecteurs 40 pistes** : indiquez qu'un lecteur est un 5,25" 40 pistes (360K) ou
   un 3", et Floppy-Copy refuse ce qui enverrait la tête en butée (un format Amiga ou 720K, un
   double pas, un déplacement au cylindre 79) et limite les lectures en flux et les effacements
@@ -61,39 +58,20 @@ pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
   lecteur choisi est ajouté automatiquement.
 * Thème sombre, clair ou celui du système ; taille du texte réglable ; la commande `gw` exacte
   affichée avant d'être lancée.
+* **Écran rétro de copieur** : un clic sur *Retro* transforme la fenêtre en copieur plein écran
+  dans l'esprit des copieurs de disquettes classiques de l'Amiga — plaques métalliques, police
+  pixel, voyants des lecteurs, une grille de pistes 0-79 par face, une ligne d'état.
 
 ## Captures d'écran
 
 | | |
 |---|---|
-| <img src="docs/images/read.png" alt="Interface classique : lecture d'une disquette Amiga usée, les deux faces piste par piste, un conseil et la relecture en un clic"> | <img src="docs/images/write.png" alt="Page Write avec la vérification de compatibilité Amiga"> |
-| **Read disk** (interface classique) — une disquette Amiga usée, avec un conseil et *Re-read the failed tracks* | **Write disk** — avec la vérification de compatibilité Amiga |
-| <img src="docs/images/format.png" alt="Page Format, thème clair : une disquette Commodore 1541 formatée et vérifiée"> | <img src="docs/images/health.png" alt="Drive health : verdict Drive healthy, contrôles et carte de la disquette de référence"> |
-| **Format disk** — une disquette Commodore 1541 vierge, écrite et vérifiée (thème clair) | **Drive health** — contrôle guidé avec un verdict |
-| <img src="docs/images/rpm.png" alt="Drive RPM : 299,36 tr/min avec historique et statistiques"> | <img src="docs/images/inspector.png" alt="Image inspector affichant un volume AmigaDOS"> |
-| **Drive RPM** — vitesse, écart et historique | **Image inspector** — taille, SHA-256, explorateur AmigaDOS |
-| <img src="docs/images/help.png" alt="Page Help : premiers pas et rôle de chaque page"> | |
-| **Help** — premiers pas, pages, glossaire, limites connues | |
-
-### Écran rétro de copieur
-
-L'écran rétro est montré en haut de cette page. *Retro* dans la barre du haut l'affiche, *CLASSIC* revient à l'interface normale. Cliquez sur une
-valeur pour la changer (clic droit : valeur précédente) :
-
-* Modes **COPY** : *DOSCOPY* (secteurs décodés) et *NIBBLE* (flux brut, conserve les protections
-  anticopie), du lecteur source vers le lecteur cible — le même lecteur convient aussi, on vous
-  demande alors d'échanger les disquettes. Modes **TOOLS** : *DISK>IMAGE*, *IMAGE>DISK*,
-  *FORMAT*, *ERASE*, *CHECK* (lecture rapide) et *SPEED* (vitesse de rotation).
-* *START* / *END* (cylindres, avec les flèches), *SIDE* (les deux faces, 0 ou 1), *FORMAT* (les
-  préréglages de machines) et *DEVICE* (le fichier image pour DISK>IMAGE et IMAGE>DISK).
-* Lecteur source : les voyants au-dessus des lecteurs ; lecteur cible : ceux du dessous (ou clic /
-  clic droit sur un lecteur).
-* Dans les grilles, `0` est une piste bonne, un chiffre le nombre de secteurs illisibles, `R` une
-  piste lue après plusieurs essais, `-` une piste vide ; survolez une case pour le détail.
-  *DIRECTORY* liste le contenu d'une image AmigaDOS, *REPEAT* relance la dernière opération,
-  *STOP* (ou `Échap`) l'interrompt.
-
-Un design original : aucun logo, graphisme ou texte d'un programme existant n'est repris.
+| <img src="docs/images/write.png" alt="Page Write avec la vérification de compatibilité Amiga"> | <img src="docs/images/format.png" alt="Page Format, thème clair : une disquette Commodore 1541 formatée et vérifiée"> |
+| **Write disk** — avec la vérification de compatibilité Amiga | **Format disk** — une disquette Commodore 1541 vierge, écrite et vérifiée (thème clair) |
+| <img src="docs/images/health.png" alt="Drive health : verdict Drive healthy, contrôles et carte de la disquette de référence"> | <img src="docs/images/rpm.png" alt="Drive RPM : 299,36 tr/min avec historique et statistiques"> |
+| **Drive health** — contrôle guidé avec un verdict | **Drive RPM** — vitesse, écart et historique |
+| <img src="docs/images/inspector.png" alt="Image inspector affichant un volume AmigaDOS"> | <img src="docs/images/help.png" alt="Page Help : premiers pas et rôle de chaque page"> |
+| **Image inspector** — taille, SHA-256, explorateur AmigaDOS | **Help** — premiers pas, pages, glossaire, limites connues |
 
 ## Disquettes prises en charge
 
@@ -224,6 +202,30 @@ cargo build --release -p hgf-gui
 La création des paquets, les tests avec les outils de référence, l'icône et la publication sont
 décrits dans [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) (en anglais). L'historique des versions
 est dans [CHANGELOG.md](CHANGELOG.md).
+
+## Écran rétro de copieur
+
+<p align="center">
+  <img src="docs/images/retro.png" width="860" alt="L'écran rétro : un DOSCOPY a lu la disquette source, les grilles montrent les pistes bonnes, récupérées et illisibles">
+</p>
+
+*Retro* dans la barre du haut l'affiche, *CLASSIC* revient à l'interface normale. Cliquez sur une
+valeur pour la changer (clic droit : valeur précédente) :
+
+* Modes **COPY** : *DOSCOPY* (secteurs décodés) et *NIBBLE* (flux brut, conserve les protections
+  anticopie), du lecteur source vers le lecteur cible — le même lecteur convient aussi, on vous
+  demande alors d'échanger les disquettes. Modes **TOOLS** : *DISK>IMAGE*, *IMAGE>DISK*,
+  *FORMAT*, *ERASE*, *CHECK* (lecture rapide) et *SPEED* (vitesse de rotation).
+* *START* / *END* (cylindres, avec les flèches), *SIDE* (les deux faces, 0 ou 1), *FORMAT* (les
+  préréglages de machines) et *DEVICE* (le fichier image pour DISK>IMAGE et IMAGE>DISK).
+* Lecteur source : les voyants au-dessus des lecteurs ; lecteur cible : ceux du dessous (ou clic /
+  clic droit sur un lecteur).
+* Dans les grilles, `0` est une piste bonne, un chiffre le nombre de secteurs illisibles, `R` une
+  piste lue après plusieurs essais, `-` une piste vide ; survolez une case pour le détail.
+  *DIRECTORY* liste le contenu d'une image AmigaDOS, *REPEAT* relance la dernière opération,
+  *STOP* (ou `Échap`) l'interrompt.
+
+Un design original : aucun logo, graphisme ou texte d'un programme existant n'est repris.
 
 ## Remerciements et licences
 

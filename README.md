@@ -17,15 +17,15 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/retro.png" width="860" alt="Floppy-Copy's retro copier screen: a DOSCOPY has read the source disk, the track grids show good, recovered and bad tracks">
+  <img src="docs/images/read.png" width="860" alt="Floppy-Copy's classic interface: reading a worn Amiga disk, both sides track by track, a hint and a one-click re-read">
 </p>
 
 Floppy-Copy drives the Greaseweazle host tools (`gw`) for you. It covers every `gw`
 command, shows the disk track by track and sector by sector while it is read or written, explains
 errors in plain language, and never runs a destructive operation without asking first.
 
-*Formerly HappyGreaseFloppy, and FluxMyFluffyFloppy before that.* Besides the retro copier
-screen above, a classic interface gives access to every option.
+*Formerly HappyGreaseFloppy, and FluxMyFluffyFloppy before that.* A retro copier screen, in the
+spirit of the classic Amiga copiers, is also available: see [the end of this page](#retro-copier-screen).
 
 ## Highlights
 
@@ -42,9 +42,6 @@ screen above, a classic interface gives access to every option.
   if it fails), optional write test, and a verdict.
 * **Archive a box of disks**: automatic numbering (`disk_001.adf`, `disk_002.adf`…), saved
   settings per machine, a log file of every command.
-* **Retro copier screen**: one click on *Retro* turns the window into a full-screen copier in the
-  spirit of the classic Amiga disk copiers — metal plates, pixel font, drive lamps, one 0-79 track
-  grid per side, a status line.
 * **Protects 40-track drives**: tell Floppy-Copy that a drive is a 40-track 5.25" (360K) or 3"
   drive, and it refuses what would send the head into its end stop (an Amiga or 720K format, a
   double step, a seek to cylinder 79) and limits raw reads and erases to cylinders 0-39.
@@ -53,38 +50,20 @@ screen above, a classic interface gives access to every option.
 * **Type any `gw` command** in the console (`reset`, `info`, `rpm --nr 5`…); the selected drive
   is added for you.
 * Dark, light or system theme; adjustable text size; the exact `gw` command shown before it runs.
+* **Retro copier screen**: one click on *Retro* turns the window into a full-screen copier in the
+  spirit of the classic Amiga disk copiers — metal plates, pixel font, drive lamps, one 0-79 track
+  grid per side, a status line.
 
 ## Screenshots
 
 | | |
 |---|---|
-| <img src="docs/images/read.png" alt="Classic interface: reading a worn Amiga disk, both sides track by track, a hint and a one-click re-read"> | <img src="docs/images/write.png" alt="Write page with the Amiga compatibility check"> |
-| **Read disk** (classic interface) — a worn Amiga disk, with a hint and *Re-read the failed tracks* | **Write disk** — with the Amiga compatibility check |
-| <img src="docs/images/format.png" alt="Format page, light theme: a Commodore 1541 disk formatted and verified"> | <img src="docs/images/health.png" alt="Drive health: verdict Drive healthy, checks and the reference disk map"> |
-| **Format disk** — a blank Commodore 1541 disk, written and verified (light theme) | **Drive health** — guided check with a verdict |
-| <img src="docs/images/rpm.png" alt="Drive RPM: 299.36 rpm with history chart and statistics"> | <img src="docs/images/inspector.png" alt="Image inspector showing an AmigaDOS volume"> |
-| **Drive RPM** — speed, deviation and history | **Image inspector** — size, SHA-256, AmigaDOS explorer |
-| <img src="docs/images/help.png" alt="Help page: getting started and what each page is for"> | |
-| **Help** — getting started, pages, glossary, known limits | |
-
-### Retro copier screen
-
-The retro screen is shown at the top of this page. *Retro* in the top bar switches to it, *CLASSIC* switches back. Click a value to change it (right
-click: previous value):
-
-* **COPY** modes: *DOSCOPY* (decoded sectors) and *NIBBLE* (raw flux, keeps copy protections),
-  from the source drive to the target drive — the same drive works too, you are asked to swap
-  disks. **TOOLS** modes: *DISK>IMAGE*, *IMAGE>DISK*, *FORMAT*, *ERASE*, *CHECK* (quick scan) and
-  *SPEED* (RPM).
-* *START* / *END* (cylinders, with the arrows), *SIDE* (both, 0 or 1), *FORMAT* (the machine
-  presets) and *DEVICE* (the image file for DISK>IMAGE and IMAGE>DISK).
-* Source drives: the lamps above the drives; target drives: the lamps below (or click / right
-  click a drive).
-* In the grids, `0` is a good track, a digit the number of unreadable sectors, `R` a track read
-  after retries, `-` an empty track; hover a cell for details. *DIRECTORY* lists an AmigaDOS
-  image, *REPEAT* runs the last operation again, *STOP* (or `Esc`) interrupts it.
-
-An original design: no logo, artwork or text of an existing program is used.
+| <img src="docs/images/write.png" alt="Write page with the Amiga compatibility check"> | <img src="docs/images/format.png" alt="Format page, light theme: a Commodore 1541 disk formatted and verified"> |
+| **Write disk** — with the Amiga compatibility check | **Format disk** — a blank Commodore 1541 disk, written and verified (light theme) |
+| <img src="docs/images/health.png" alt="Drive health: verdict Drive healthy, checks and the reference disk map"> | <img src="docs/images/rpm.png" alt="Drive RPM: 299.36 rpm with history chart and statistics"> |
+| **Drive health** — guided check with a verdict | **Drive RPM** — speed, deviation and history |
+| <img src="docs/images/inspector.png" alt="Image inspector showing an AmigaDOS volume"> | <img src="docs/images/help.png" alt="Help page: getting started and what each page is for"> |
+| **Image inspector** — size, SHA-256, AmigaDOS explorer | **Help** — getting started, pages, glossary, known limits |
 
 ## Supported disks
 
@@ -210,6 +189,29 @@ cargo build --release -p hgf-gui
 Packaging, tests against reference tools, the icon and the release workflow are described in
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The version history is in
 [CHANGELOG.md](CHANGELOG.md).
+
+## Retro copier screen
+
+<p align="center">
+  <img src="docs/images/retro.png" width="860" alt="The retro copier screen: a DOSCOPY has read the source disk, the track grids show good, recovered and bad tracks">
+</p>
+
+*Retro* in the top bar switches to it, *CLASSIC* switches back. Click a value to change it (right
+click: previous value):
+
+* **COPY** modes: *DOSCOPY* (decoded sectors) and *NIBBLE* (raw flux, keeps copy protections),
+  from the source drive to the target drive — the same drive works too, you are asked to swap
+  disks. **TOOLS** modes: *DISK>IMAGE*, *IMAGE>DISK*, *FORMAT*, *ERASE*, *CHECK* (quick scan) and
+  *SPEED* (RPM).
+* *START* / *END* (cylinders, with the arrows), *SIDE* (both, 0 or 1), *FORMAT* (the machine
+  presets) and *DEVICE* (the image file for DISK>IMAGE and IMAGE>DISK).
+* Source drives: the lamps above the drives; target drives: the lamps below (or click / right
+  click a drive).
+* In the grids, `0` is a good track, a digit the number of unreadable sectors, `R` a track read
+  after retries, `-` an empty track; hover a cell for details. *DIRECTORY* lists an AmigaDOS
+  image, *REPEAT* runs the last operation again, *STOP* (or `Esc`) interrupts it.
+
+An original design: no logo, artwork or text of an existing program is used.
 
 ## Credits and licences
 
