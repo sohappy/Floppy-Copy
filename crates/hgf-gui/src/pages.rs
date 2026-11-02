@@ -31,6 +31,7 @@ impl App {
             Page::Reset => narrow(ui, theme::w(560.0), |ui| self.page_reset(ui)),
             Page::Update => narrow(ui, theme::w(680.0), |ui| self.page_update(ui)),
             Page::Inspector => narrow(ui, theme::w(780.0), |ui| self.page_inspector(ui)),
+            Page::Help => narrow(ui, theme::w(820.0), |ui| self.page_help(ui)),
             Page::Settings => narrow(ui, theme::w(720.0), |ui| self.page_settings(ui)),
         }
     }
@@ -71,10 +72,13 @@ impl App {
             card(ui, ph::DISC, "Disk format", c, |ui| {
                 if let Some(p) = widgets::preset_chips(ui, &o.format) {
                     o.format = p.format.to_string();
+                    // A preset brings its own tracks (e.g. one side, 40 cylinders for the CPC).
+                    o.tracks.custom = p.tracks.to_string();
                     widgets::set_extension(&mut o.output, p.extension);
                 }
                 ui.add_space(4.0);
                 widgets::format_picker(ui, "read_fmt", &mut o.format, &app.catalog, "None — raw flux only");
+                widgets::gcr_warning(ui, &app.catalog, &o.format);
             });
             ui.add_space(8.0);
             card(ui, ph::FILE_ARROW_DOWN, "Output image", c, |ui| {
@@ -201,7 +205,7 @@ impl App {
                 app.next.numbered = numbered;
                 app.request(action.clone());
             }
-            widgets::command_preview(ui, &action.command_line(&app.s.cfg, app.s.drive));
+            app.preview(ui, action);
             if folder_error.is_some() {
                 app.notice = folder_error;
             }
@@ -264,9 +268,12 @@ impl App {
             card(ui, ph::DISC, "Disk format", c, |ui| {
                 if let Some(p) = widgets::preset_chips(ui, &o.format) {
                     o.format = p.format.to_string();
+                    // A preset brings its own tracks (e.g. one side, 40 cylinders for the CPC).
+                    o.tracks.custom = p.tracks.to_string();
                 }
                 ui.add_space(4.0);
                 widgets::format_picker(ui, "write_fmt", &mut o.format, &app.catalog, "Auto — from the image");
+                widgets::gcr_warning(ui, &app.catalog, &o.format);
                 ui.label(
                     RichText::new("Required for .img/.st images; flux and self-describing images need none.")
                         .small()
@@ -325,7 +332,7 @@ impl App {
             if widgets::action_button(ui, ph::UPLOAD_SIMPLE, "WRITE IMAGE TO DISK", c, !busy) {
                 app.request(action.clone());
             }
-            widgets::command_preview(ui, &action.command_line(&app.s.cfg, app.s.drive));
+            app.preview(ui, action);
         });
     }
 
@@ -398,6 +405,8 @@ impl App {
             card(ui, ph::DISC, "Disk format", c, |ui| {
                 if let Some(p) = widgets::preset_chips(ui, &o.format) {
                     o.format = p.format.to_string();
+                    // A preset brings its own tracks (e.g. one side, 40 cylinders for the CPC).
+                    o.tracks.custom = p.tracks.to_string();
                     widgets::set_extension(&mut o.output, p.extension);
                 }
                 ui.add_space(4.0);
@@ -443,6 +452,7 @@ impl App {
         self.split(ui, |app, ui| {
             let busy = app.busy();
             let c = theme::ERASE;
+            let forty = app.s.drive_type(app.s.drive) == hgf_core::drivelimit::DriveType::Tracks40;
             let o = &mut app.s.erase;
             card(ui, ph::WARNING, "Destructive operation", c, |ui| {
                 ui.label(
@@ -453,6 +463,16 @@ impl App {
             ui.add_space(8.0);
             card(ui, ph::SLIDERS_HORIZONTAL, "Options", c, |ui| {
                 widgets::tracks(ui, &mut o.tracks);
+                ui.label(
+                    RichText::new(if forty {
+                        "40-track drive: without a range, cylinders 0-39 are erased (both sides)."
+                    } else {
+                        "80-track drive: without a range, gw erases cylinders 0-81. For a 5.25\" DD \
+                         (40-track) drive, set the drive type to 40 tracks in the top bar first."
+                    })
+                    .small()
+                    .color(if forty { theme::MUTED } else { theme::WARN }),
+                );
                 widgets::opt_u32(ui, "Revolutions", &mut o.revs, 1, 20, "--revs per track (default 1)");
                 ui.checkbox(&mut o.hfreq, "High-frequency erase (--hfreq)")
                     .on_hover_text("Write a high-frequency signal instead of DC erase");
@@ -464,7 +484,7 @@ impl App {
             if widgets::action_button(ui, ph::ERASER, "ERASE DISK", c, !busy) {
                 app.request(action.clone());
             }
-            widgets::command_preview(ui, &action.command_line(&app.s.cfg, app.s.drive));
+            app.preview(ui, action);
         });
     }
 
@@ -539,6 +559,23 @@ impl App {
             ui.vertical(|ui| {
                 ui.set_width(theme::w(FORM_WIDTH));
                 egui::ScrollArea::vertical().id_salt("align_form").show(ui, |ui| {
+                    if !self.catalog.has_action("align") {
+                        card(ui, ph::WARNING, "Not available with this gw", theme::WARN, |ui| {
+                            ui.add(
+                                egui::Label::new(
+                                    "The installed Greaseweazle host tools have no 'align' command: it \
+                                     came with version 1.21. Update the host tools to use this page.",
+                                )
+                                .wrap(),
+                            );
+                            ui.hyperlink_to(
+                                format!("{}  Download the host tools", ph::ARROW_SQUARE_OUT),
+                                "https://github.com/keirf/greaseweazle/wiki/Download-Host-Tools",
+                            );
+                        });
+                        ui.add_space(8.0);
+                    }
+                    let forty = self.s.drive_type(self.s.drive) == hgf_core::drivelimit::DriveType::Tracks40;
                     let o = &mut self.s.align;
                     card(ui, ph::CROSSHAIR, "Alignment disk", c, |ui| {
                         ui.label(
@@ -564,12 +601,22 @@ impl App {
                             "--tracks: one cylinder (one or both heads)",
                         );
                         ui.horizontal(|ui| {
-                            for (lbl, spec) in [
-                                ("Cyl 0", "c=0:h=0"),
-                                ("Cyl 40", "c=40:h=0"),
-                                ("Cyl 79", "c=79:h=0"),
-                                ("Both heads", "c=0:h=0-1"),
-                            ] {
+                            let marks: [(&str, &str); 4] = if forty {
+                                [
+                                    ("Cyl 0", "c=0:h=0"),
+                                    ("Cyl 20", "c=20:h=0"),
+                                    ("Cyl 39", "c=39:h=0"),
+                                    ("Both heads", "c=0:h=0-1"),
+                                ]
+                            } else {
+                                [
+                                    ("Cyl 0", "c=0:h=0"),
+                                    ("Cyl 40", "c=40:h=0"),
+                                    ("Cyl 79", "c=79:h=0"),
+                                    ("Both heads", "c=0:h=0-1"),
+                                ]
+                            };
+                            for (lbl, spec) in marks {
                                 if ui.small_button(lbl).clicked() {
                                     o.tracks = spec.into();
                                 }
@@ -598,10 +645,12 @@ impl App {
                         });
                     });
                     ui.add_space(10.0);
-                    if widgets::action_button(ui, ph::CROSSHAIR, "START ALIGNMENT", c, !busy) {
-                        let a = Action::Align(o.clone());
-                        self.request(a);
+                    let can = self.catalog.has_action("align");
+                    let a = Action::Align(o.clone());
+                    if widgets::action_button(ui, ph::CROSSHAIR, "START ALIGNMENT", c, !busy && can) {
+                        self.request(a.clone());
                     }
+                    self.preview(ui, a);
                 });
             });
             ui.separator();
@@ -612,17 +661,36 @@ impl App {
     fn page_seek(&mut self, ui: &mut Ui) {
         let busy = self.busy();
         let c = theme::DRIVE;
+        let forty = self.s.drive_type(self.s.drive) == hgf_core::drivelimit::DriveType::Tracks40;
         card(ui, ph::ARROWS_DOWN_UP, "Move the head", c, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Cylinder");
                 ui.add(egui::DragValue::new(&mut self.s.seek.cylinder).range(0..=100));
-                for cyl in [0, 40, 79, 83] {
+                let marks: &[u32] = if forty { &[0, 20, 39] } else { &[0, 40, 79, 83] };
+                for &cyl in marks {
                     if ui.small_button(cyl.to_string()).clicked() {
                         self.s.seek.cylinder = cyl;
                     }
                 }
             });
-            ui.checkbox(&mut self.s.seek.motor_on, "Spin the motor while seeking");
+            ui.checkbox(&mut self.s.seek.motor_on, "Spin the motor while seeking")
+                .on_hover_text("--motor-on: many drives only step while their motor turns");
+            if !self.s.seek.motor_on {
+                ui.label(
+                    RichText::new("If the head does not move, tick this box: many drives need the motor on.")
+                        .small()
+                        .color(theme::WARN),
+                );
+            }
+            ui.label(
+                RichText::new(if forty {
+                    "40-track drive: cylinders 0-39."
+                } else {
+                    "80-track drive: cylinders 0-79 (a few more on most drives)."
+                })
+                .small()
+                .color(theme::MUTED),
+            );
             if self.s.seek.is_extreme() {
                 ui.label(
                     RichText::new(format!(
@@ -634,10 +702,11 @@ impl App {
             }
         });
         ui.add_space(10.0);
+        let a = Action::Seek(self.s.seek.clone());
         if widgets::action_button(ui, ph::ARROWS_DOWN_UP, "SEEK", c, !busy) {
-            let a = Action::Seek(self.s.seek.clone());
-            self.request(a);
+            self.request(a.clone());
         }
+        self.preview(ui, a);
     }
 
     fn page_clean(&mut self, ui: &mut Ui) {
@@ -662,10 +731,11 @@ impl App {
             });
         });
         ui.add_space(10.0);
+        let a = Action::Clean(self.s.clean.clone());
         if widgets::action_button(ui, ph::BROOM, "CLEAN DRIVE", c, !busy) {
-            let a = Action::Clean(self.s.clean.clone());
-            self.request(a);
+            self.request(a.clone());
         }
+        self.preview(ui, a);
     }
 
     fn page_info(&mut self, ui: &mut Ui) {
@@ -711,9 +781,17 @@ impl App {
                 ui.set_width(theme::w(FORM_WIDTH));
                 card(ui, ph::LIST_NUMBERS, "Current values", c, |ui| {
                     if self.delays.is_empty() {
-                        ui.label(RichText::new("Not read yet.").color(theme::MUTED));
+                        ui.label(RichText::new("Not read yet: click READ DELAYS.").color(theme::MUTED));
+                    } else {
+                        delays_table(ui, &self.delays);
                     }
-                    widgets::kv_grid(ui, "delays_now", &self.delays);
+                });
+                ui.add_space(8.0);
+                card(ui, ph::LIGHTBULB, "When to change them", c, |ui| {
+                    for (what, tip) in DELAY_TIPS {
+                        ui.label(RichText::new(*what).strong().small());
+                        ui.add(egui::Label::new(RichText::new(*tip).small()).wrap());
+                    }
                 });
                 ui.add_space(8.0);
                 if widgets::action_button(ui, ph::ARROWS_CLOCKWISE, "READ DELAYS", c, !busy) {
@@ -737,7 +815,7 @@ impl App {
                         ui,
                         "Step delay (µs)",
                         &mut d.step,
-                        5000,
+                        10_000,
                         100_000,
                         "Delay after a head-step pulse",
                     );
@@ -778,9 +856,12 @@ impl App {
                 });
                 ui.add_space(8.0);
                 let has_changes = !self.s.delays_edit.is_query();
+                let a = Action::Delays(self.s.delays_edit.clone());
                 if widgets::action_button(ui, ph::CHECK, "APPLY", theme::WRITE, !busy && has_changes) {
-                    let a = Action::Delays(self.s.delays_edit.clone());
-                    self.request(a);
+                    self.request(a.clone());
+                }
+                if has_changes {
+                    self.preview(ui, a);
                 }
                 ui.add_space(4.0);
                 if ui
@@ -799,13 +880,41 @@ impl App {
     fn page_pins(&mut self, ui: &mut Ui) {
         let busy = self.busy();
         let c = theme::DEVICE;
+        card(ui, ph::MAGNIFYING_GLASS, "Read a drive signal", c, |ui| {
+            ui.label(
+                RichText::new(
+                    "A quick check of the drive's outputs, e.g. whether it sees the write-protect tab. \
+                     High = inactive, Low = active.",
+                )
+                .small()
+                .color(theme::MUTED),
+            );
+            ui.horizontal_wrapped(|ui| {
+                for (pin, label) in [(8, "Index (8)"), (26, "Track 0 (26)"), (28, "Write protect (28)")] {
+                    if ui.add_enabled(!busy, egui::Button::new(label)).clicked() {
+                        self.s.pin = pin;
+                        self.request(Action::PinGet { pin });
+                    }
+                }
+            });
+        });
+        ui.add_space(8.0);
         card(ui, ph::PLUGS, "User-modifiable interface pin", c, |ui| {
+            ui.add(
+                egui::Label::new(
+                    RichText::new(
+                        "Only some even pins can be set, depending on the model (V4: 2, 4, 6, 10, 12, \
+                         14, 16; F7: 2, 10, 12, 14, 16; F1: 2, 10, 14). Pin 2 is density select \
+                         (DENSEL) on many drives. gw reset puts them back to their power-on level.",
+                    )
+                    .small()
+                    .color(theme::MUTED),
+                )
+                .wrap(),
+            );
             ui.horizontal(|ui| {
                 ui.label("Pin");
                 ui.add(egui::DragValue::new(&mut self.s.pin).range(1..=34));
-                ui.label(
-                    RichText::new("(pin 2 = density select on most drives)").small().color(theme::MUTED),
-                );
             });
             ui.horizontal(|ui| {
                 if ui
@@ -826,6 +935,8 @@ impl App {
                     self.request(Action::PinSet { pin, high });
                 }
             });
+            let (pin, high) = (self.s.pin, self.s.pin_high);
+            self.preview(ui, Action::PinSet { pin, high });
             if let Some(r) = &self.pin_result {
                 ui.add_space(6.0);
                 ui.label(RichText::new(r).size(theme::fs(18.0)).strong().color(theme::ACCENT));
@@ -871,14 +982,35 @@ impl App {
         let busy = self.busy();
         let c = theme::DEVICE;
         card(ui, ph::ARROW_COUNTER_CLOCKWISE, "Reset to power-on state", c, |ui| {
-            ui.label("Deselects all drives, stops motors and restores pins.");
-            ui.checkbox(&mut self.s.reset_delays, "Also restore factory drive delays");
+            ui.label("gw reset sends the firmware's reset command, which:");
+            for line in [
+                "deselects the drive and stops its motor;",
+                "forgets the bus type (PC or Shugart), set again by the next command;",
+                "puts the user-modifiable interface pins back to their power-on level;",
+                "keeps the drive delays: gw reads them first and writes them back, unless you tick \
+                 the box below.",
+            ] {
+                ui.horizontal_top(|ui| {
+                    ui.label(RichText::new("•").color(theme::MUTED));
+                    ui.add(egui::Label::new(RichText::new(line).small()).wrap());
+                });
+            }
+            ui.label(RichText::new("Disks and images are not touched.").small().color(theme::MUTED));
+            ui.checkbox(&mut self.s.reset_delays, "Also restore the factory drive delays (--delays)");
         });
         ui.add_space(10.0);
+        let a = Action::Reset { delays: self.s.reset_delays };
         if widgets::action_button(ui, ph::POWER, "RESET DEVICE", c, !busy) {
-            let delays = self.s.reset_delays;
-            self.request(Action::Reset { delays });
+            self.request(a.clone());
         }
+        self.preview(ui, a);
+        ui.label(
+            RichText::new(
+                "You can also type any gw command, e.g. reset, in the field at the bottom of the console.",
+            )
+            .small()
+            .color(theme::MUTED),
+        );
     }
 
     fn page_update(&mut self, ui: &mut Ui) {
@@ -997,7 +1129,13 @@ impl App {
                                     ("Bootable".into(), yes_no(a.bootable)),
                                     (
                                         "Boot block checksum".into(),
-                                        if a.boot_checksum_ok { "valid".into() } else { "invalid".into() },
+                                        if a.boot_checksum_ok {
+                                            "valid".into()
+                                        } else if !a.boot_code {
+                                            "not set (normal for a disk that does not boot)".into()
+                                        } else {
+                                            "invalid".into()
+                                        },
                                     ),
                                     (
                                         "Root block".into(),
@@ -1139,6 +1277,33 @@ impl App {
                 ui.checkbox(&mut self.s.probe_on_start, "Detect the device at start-up");
             });
             ui.add_space(8.0);
+            card(ui, ph::HARD_DRIVES, "Drives", c, |ui| {
+                ui.label(
+                    RichText::new(
+                        "Type of each drive. A 40-track drive (5.25\" DD 360K, 3\") stops at cylinder 39: \
+                         commands that would go further are refused, raw reads and erases are limited \
+                         to cylinders 0-39.",
+                    )
+                    .small()
+                    .color(theme::MUTED),
+                );
+                egui::Grid::new("drive_types").num_columns(2).spacing([16.0, 4.0]).show(ui, |ui| {
+                    for d in Drive::ALL {
+                        ui.label(d.label());
+                        let mut t = self.s.drive_type(d);
+                        ui.horizontal(|ui| {
+                            for k in hgf_core::drivelimit::DriveType::ALL {
+                                ui.selectable_value(&mut t, k, k.label()).on_hover_text(k.help());
+                            }
+                        });
+                        self.s.set_drive_type(d, t);
+                        ui.end_row();
+                    }
+                });
+                ui.checkbox(&mut self.s.expert_pages, "Show the expert pages (Drive delays, Interface pins)")
+                    .on_hover_text("Low-level device settings that normal use never needs");
+            });
+            ui.add_space(8.0);
             card(ui, ph::PALETTE, "Appearance", c, |ui| {
                 ui.horizontal(|ui| {
                     let before = self.s.theme_choice();
@@ -1247,17 +1412,10 @@ impl App {
             });
             ui.add_space(8.0);
             card(ui, ph::QUESTION, "Help", c, |ui| {
-                for (label, url) in [
-                    ("Getting started (Greaseweazle wiki)", "https://github.com/keirf/greaseweazle/wiki/Getting-Started"),
-                    ("Troubleshooting FAQ: No Index, Track 0 not found…", "https://github.com/keirf/greaseweazle/wiki/Troubleshooting-FAQ"),
-                    ("Drive select: A, B, 0, 1…", "https://github.com/keirf/greaseweazle/wiki/Drive-Select"),
-                    ("Specifying tracks (TSPEC)", "https://github.com/keirf/greaseweazle/wiki/Specifying-Tracks"),
-                    ("Supported image types and file options", "https://github.com/keirf/greaseweazle/wiki/Supported-Image-Types"),
-                    ("Write precompensation", "https://github.com/keirf/greaseweazle/wiki/Write-Precompensation"),
-                    ("Download the host tools", "https://github.com/keirf/greaseweazle/wiki/Download-Host-Tools"),
-                ] {
-                    ui.hyperlink_to(format!("{}  {label}", ph::ARROW_SQUARE_OUT), url);
+                if ui.button(format!("{}  Open the Help page", ph::QUESTION)).clicked() {
+                    self.s.page = Page::Help;
                 }
+                ui.checkbox(&mut self.s.page_help, "Show the explanation at the top of each page");
             });
             ui.add_space(8.0);
             ui.label(
@@ -1271,6 +1429,50 @@ impl App {
             );
         });
     }
+}
+
+/// Factory delays of the Greaseweazle firmware (`factory_delay_params`), as `gw delays` prints them.
+const FACTORY_DELAYS: &[(&str, &str)] = &[
+    ("Select Delay", "10us"),
+    ("Step Delay", "10000us"),
+    ("Settle Time", "15ms"),
+    ("Motor Delay", "750ms"),
+    ("Watchdog", "10000ms"),
+    ("Pre-Write", "100us"),
+    ("Post-Write", "1000us"),
+    ("Index Mask", "200us"),
+];
+
+const DELAY_TIPS: &[(&str, &str)] = &[
+    ("Leave them alone", "If reading and writing work, keep the factory values."),
+    (
+        "Head moves badly, \"Track 0 not found\"",
+        "Old or worn drives may miss steps: raise the step delay (e.g. 12000 µs) or the settle time \
+         (e.g. 25 ms).",
+    ),
+    (
+        "First track fails, the rest is fine",
+        "The motor is slow to reach speed: raise the motor delay (e.g. 1000 ms).",
+    ),
+    ("Back to normal", "Restore factory delays below, or Reset device with its delays box ticked."),
+];
+
+/// Current delays next to the factory values; the ones that differ are highlighted.
+fn delays_table(ui: &mut Ui, delays: &[(String, String)]) {
+    egui::Grid::new("delays_now").num_columns(3).spacing([16.0, 4.0]).striped(true).show(ui, |ui| {
+        ui.label(RichText::new("Delay").strong());
+        ui.label(RichText::new("Now").strong());
+        ui.label(RichText::new("Factory").strong());
+        ui.end_row();
+        for (k, v) in delays {
+            let factory = FACTORY_DELAYS.iter().find(|(n, _)| n == k).map(|(_, f)| *f);
+            let same = factory.is_none_or(|f| f == v.replace(' ', ""));
+            ui.label(k);
+            ui.label(RichText::new(v).color(if same { theme::OK } else { theme::WARN }).strong());
+            ui.label(RichText::new(factory.unwrap_or("—")).color(theme::MUTED));
+            ui.end_row();
+        }
+    });
 }
 
 /// Single-column page of bounded width (cards and buttons line up).
@@ -1371,6 +1573,19 @@ fn align_chart(ui: &mut Ui, data: &std::collections::VecDeque<(u8, u32, u32)>) {
 }
 
 impl App {
+    /// The command a button will run, with the drive-type limits applied.
+    pub fn preview(&self, ui: &mut Ui, mut action: Action) {
+        let dtype = self.s.drive_type(self.s.drive);
+        if let Err(e) = hgf_core::drivelimit::apply(&mut action, dtype) {
+            ui.add(
+                egui::Label::new(RichText::new(format!("{}  {e}", ph::WARNING)).small().color(theme::BAD))
+                    .wrap(),
+            );
+            return;
+        }
+        widgets::command_preview(ui, &action.command_line(&self.s.cfg, self.s.drive));
+    }
+
     /// "Amiga compatibility" card on the Write page.
     fn amiga_check(&mut self, ui: &mut Ui) {
         use hgf_core::compat::{self, Severity};

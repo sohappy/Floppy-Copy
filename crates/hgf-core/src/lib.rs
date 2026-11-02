@@ -14,6 +14,7 @@ pub mod apple2;
 pub mod cbmdos;
 pub mod compat;
 pub mod diskmap;
+pub mod drivelimit;
 pub mod fat12;
 pub mod formats;
 pub mod gw;

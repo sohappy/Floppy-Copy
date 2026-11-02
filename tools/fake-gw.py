@@ -8,7 +8,18 @@ cmd = a[0] if a else ''
 if __import__('os').environ.get('FAKE_LOG'):
     open(__import__('os').environ['FAKE_LOG'], 'a').write(' '.join(a) + '\n')
 if cmd in ('', '--help', '-h'):
-    print('Usage: gw [--time] [action] [-h] ...\nActions:\n  info  read  write  convert  erase  rpm'); sys.exit(0)
+    # Same layout as the real `gw --help`; FAKE_OLD=1 mimics host tools older than 1.21 (no align).
+    acts = ['info', 'read', 'write', 'convert', 'erase', 'clean', 'seek', 'delays', 'update', 'pin',
+            'reset', 'bandwidth', 'rpm'] + ([] if __import__('os').environ.get('FAKE_OLD') else ['align'])
+    print('Usage: gw [--time] [action] [-h] ...\n  --time      Print elapsed time after action is executed\n'
+          '  -h, --help  Show help message for specified action\nActions:')
+    for x in acts: print('  %-12s%s' % (x, 'Description of ' + x))
+    sys.exit(1)
+if __import__('os').environ.get('FAKE_NOOPT'):
+    # gw installed without its compiled routines prints this when a codec is loaded.
+    print('*** WARNING: Optimised data routines not found: Run scripts/setup.sh')
+    if cmd in ('read', 'write') and any(x.startswith(('apple2.', 'commodore.1541', 'mac.')) for x in a):
+        print('** FATAL ERROR:\nApple2 GCR requires optimised C extension'); sys.exit(1)
 if cmd == 'read' and '--help' in a:
     sys.exit(1)  # the GUI then uses its built-in format list
 if cmd == 'info':
@@ -117,7 +128,7 @@ if cmd == 'align':
         print("T0.0: AmigaDOS (%d/11 sectors) from Raw Flux (100000 flux in 600.00ms)" % ok); time.sleep(0.03)
     sys.exit(0)
 if cmd == 'delays':
-    print("Select Delay: 10us\nStep Delay:   5000us\nSettle Time:  15ms\nMotor Delay:  750ms\nWatchdog:     10000ms\nPre-Write:    100us\nPost-Write:   1000us\nIndex Mask:   200us"); sys.exit(0)
+    print("Select Delay: 10us\nStep Delay:   10000us\nSettle Time:  15ms\nMotor Delay:  750ms\nWatchdog:     10000ms\nPre-Write:    100us\nPost-Write:   1000us\nIndex Mask:   200us"); sys.exit(0)
 if cmd == 'bandwidth':
     print("\n                   Min.   /   Mean   /   Max.\nWrite Bandwidth:    9.512 /   10.120 /   10.550 Mbps\nRead Bandwidth:    11.004 /   11.230 /   11.600 Mbps\n\nEstimated Consistent Min. Bandwidth: 9.512 Mbps\n -> Max. Flux Rate: 1.189 Msamples/sec\n -> Min. Ave. Flux: 0.841 us"); sys.exit(0)
 if cmd == 'pin':

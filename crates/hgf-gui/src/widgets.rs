@@ -527,3 +527,21 @@ pub fn folder_button(ui: &mut Ui, path: &Path) -> Option<String> {
         _ => None,
     }
 }
+
+/// Warning under a format picker when gw cannot handle this GCR format (missing compiled routines).
+pub fn gcr_warning(ui: &mut Ui, catalog: &Catalog, format: &str) {
+    if catalog.lacks_optimised_for(format) {
+        ui.add(
+            egui::Label::new(
+                RichText::new(format!(
+                    "{}  This gw lacks its compiled data routines (\"Optimised data routines not \
+                     found\"): it cannot read or write {format}. See Help → Known limits.",
+                    ph::WARNING
+                ))
+                .small()
+                .color(theme::BAD),
+            )
+            .wrap(),
+        );
+    }
+}

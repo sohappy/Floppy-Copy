@@ -79,8 +79,8 @@ reference implementations when these are installed (the tests are skipped otherw
 * `.github/workflows/ci.yml`: `fmt` and `clippy` on Linux, build and tests on Linux, Windows and
   macOS, on every push and pull request.
 * `.github/workflows/release.yml`: *Actions → Release → Run workflow* builds the three archives
-  as downloadable artifacts, without publishing anything. Pushing a tag such as `v0.18.0`
-  (`git tag v0.18.0 && git push origin v0.18.0`) also publishes them as a GitHub release:
+  as downloadable artifacts, without publishing anything. Pushing a tag such as `v0.19.0`
+  (`git tag v0.19.0 && git push origin v0.19.0`) also publishes them as a GitHub release:
   Windows x86_64 (with embedded icon), macOS universal `.app`, Linux x86_64 (built on
   Ubuntu 22.04 for broad glibc compatibility).
 

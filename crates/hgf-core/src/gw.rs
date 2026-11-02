@@ -282,11 +282,18 @@ impl Default for CleanOpts {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SeekOpts {
     pub cylinder: u32,
+    /// Many drives only step while their motor turns.
     pub motor_on: bool,
+}
+
+impl Default for SeekOpts {
+    fn default() -> Self {
+        Self { cylinder: 0, motor_on: true }
+    }
 }
 
 impl SeekOpts {
@@ -356,10 +363,58 @@ impl Default for AlignOpts {
     }
 }
 
+/// Commands that take `--drive`.
+const DRIVE_COMMANDS: &[&str] = &["read", "write", "erase", "clean", "seek", "rpm", "align"];
+/// Commands that change the disk or the device.
+const CHANGING_COMMANDS: &[&str] = &["write", "erase", "clean", "seek", "update", "delays", "pin"];
+
+/// The typed command without a leading `gw` (or the configured program name).
+fn custom_text(text: &str) -> &str {
+    let t = text.trim();
+    match t.split_once(char::is_whitespace) {
+        Some((first, rest)) if first == "gw" || first.ends_with("/gw") || first.ends_with("gw.exe") => {
+            rest.trim()
+        }
+        _ if t == "gw" => "",
+        _ => t,
+    }
+}
+
+/// Split a command line into words: blanks separate, double or single quotes group.
+pub fn split_words(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut cur = String::new();
+    let mut quote: Option<char> = None;
+    let mut started = false;
+    for ch in text.chars() {
+        match (quote, ch) {
+            (Some(q), c) if c == q => quote = None,
+            (Some(_), c) => cur.push(c),
+            (None, '"' | '\'') => {
+                quote = Some(ch);
+                started = true;
+            }
+            (None, c) if c.is_whitespace() => {
+                if started || !cur.is_empty() {
+                    out.push(std::mem::take(&mut cur));
+                }
+                started = false;
+            }
+            (None, c) => cur.push(c),
+        }
+    }
+    if started || !cur.is_empty() {
+        out.push(cur);
+    }
+    out
+}
+
 /// Every Greaseweazle action.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Action {
-    Info { bootloader: bool },
+    Info {
+        bootloader: bool,
+    },
     Read(ReadOpts),
     Write(WriteOpts),
     Convert(ConvertOpts),
@@ -368,12 +423,23 @@ pub enum Action {
     Seek(SeekOpts),
     Delays(DelaysOpts),
     Update(UpdateOpts),
-    PinGet { pin: u32 },
-    PinSet { pin: u32, high: bool },
-    Reset { delays: bool },
+    PinGet {
+        pin: u32,
+    },
+    PinSet {
+        pin: u32,
+        high: bool,
+    },
+    Reset {
+        delays: bool,
+    },
     Bandwidth,
-    Rpm { nr: u32 },
+    Rpm {
+        nr: u32,
+    },
     Align(AlignOpts),
+    /// A command typed in the console, without the leading `gw` (e.g. `reset --delays`).
+    Custom(String),
 }
 
 /// Discriminant of [`Action`], convenient for the UI.
@@ -394,6 +460,7 @@ pub enum ActionKind {
     Bandwidth,
     Rpm,
     Align,
+    Custom,
 }
 
 impl ActionKind {
@@ -414,6 +481,7 @@ impl ActionKind {
             ActionKind::Bandwidth => "BANDWIDTH",
             ActionKind::Rpm => "RPM",
             ActionKind::Align => "ALIGNING",
+            ActionKind::Custom => "RUNNING",
         }
     }
 
@@ -500,6 +568,7 @@ impl Action {
             Action::Bandwidth => ActionKind::Bandwidth,
             Action::Rpm { .. } => ActionKind::Rpm,
             Action::Align(_) => ActionKind::Align,
+            Action::Custom(_) => ActionKind::Custom,
         }
     }
 
@@ -666,6 +735,25 @@ impl Action {
                 a.densel(o.densel, o.gen_tg43);
                 a
             }
+            Action::Custom(text) => {
+                let words = split_words(custom_text(text));
+                let mut a = Args(words.iter().map(OsString::from).collect());
+                let cmd = words.first().map(String::as_str).unwrap_or("");
+                let has = |o: &str| words.iter().any(|w| w == o || w.starts_with(&format!("{o}=")));
+                let help = has("-h") || has("--help");
+                // Options go after the command (and after `pin get|set`).
+                let at = if cmd == "pin" { 2.min(a.0.len()) } else { 1.min(a.0.len()) };
+                // The selected drive and port, unless the command names its own.
+                if DRIVE_COMMANDS.contains(&cmd) && !has("--drive") && !help {
+                    a.0.insert(at, drive.arg().into());
+                    a.0.insert(at, "--drive".into());
+                }
+                if !cfg.device.trim().is_empty() && cmd != "convert" && !has("--device") && !help {
+                    a.0.insert(at, cfg.device.trim().into());
+                    a.0.insert(at, "--device".into());
+                }
+                a
+            }
         };
         if cfg.time {
             a.0.insert(0, "--time".into());
@@ -729,6 +817,19 @@ impl Action {
                 "Pin {pin} of the drive interface will be set {}.",
                 if *high { "High" } else { "Low" }
             )),
+            Action::Custom(text) => {
+                let words = split_words(custom_text(text));
+                let cmd = words.first().map(String::as_str).unwrap_or("");
+                let query = words.iter().any(|w| w == "-h" || w == "--help")
+                    || (cmd == "delays" && words.len() == 1)
+                    || (cmd == "pin" && words.get(1).map(String::as_str) == Some("get"));
+                (CHANGING_COMMANDS.contains(&cmd) && !query).then(|| {
+                    format!(
+                        "'gw {cmd}' changes the disk or the device, and a typed command skips \
+                         Floppy-Copy's checks (drive type, image size). Check it before running."
+                    )
+                })
+            }
             _ => None,
         }
     }
@@ -828,6 +929,28 @@ impl Action {
             Action::Clean(o) if o.cyls == 0 || o.passes == 0 => {
                 return Err("Cylinders and passes must be at least 1.".into());
             }
+            Action::Custom(text) => {
+                let words = split_words(custom_text(text));
+                let Some(cmd) = words.first() else {
+                    return Err("Type a gw command, e.g. reset or info.".into());
+                };
+                if !catalog.actions.is_empty() && !catalog.has_action(cmd) {
+                    return Err(format!(
+                        "'{cmd}' is not a command of this gw. Commands: {}.",
+                        catalog.actions.join(", ")
+                    ));
+                }
+                if cmd == "seek" && !words.iter().any(|w| w == "--force") {
+                    if let Some(c) = words.iter().filter_map(|w| w.parse::<u32>().ok()).next() {
+                        if c > 83 {
+                            return Err(
+                                "Add --force to seek beyond cylinder 83 (gw would wait for an answer)."
+                                    .into(),
+                            );
+                        }
+                    }
+                }
+            }
             _ => {}
         }
         Ok(warnings)
@@ -881,6 +1004,33 @@ fn same_file(a: &Path, b: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn custom_commands() {
+        let cfg = GwConfig { program: "gw".into(), ..Default::default() };
+        let line = |t: &str| Action::Custom(t.into()).command_line(&cfg, Drive::B);
+        assert_eq!(line("gw reset"), "gw reset");
+        assert_eq!(line("reset --delays"), "gw reset --delays");
+        assert_eq!(line("rpm --nr 3"), "gw rpm --drive B --nr 3");
+        assert_eq!(line("read --drive 0 \"my disk.scp\""), "gw read --drive 0 \"my disk.scp\"");
+        let cfg2 = GwConfig { program: "gw".into(), device: "COM3".into(), ..Default::default() };
+        assert_eq!(
+            Action::Custom("pin get 2".into()).command_line(&cfg2, Drive::A),
+            "gw pin get --device COM3 2"
+        );
+        assert!(Action::Custom("erase".into()).danger().is_some());
+        assert!(Action::Custom("reset".into()).danger().is_none());
+        assert!(Action::Custom("info".into()).danger().is_none());
+        assert!(Action::Custom("delays".into()).danger().is_none());
+        assert!(Action::Custom("delays --step 6000".into()).danger().is_some());
+        assert!(Action::Custom("erase --help".into()).danger().is_none());
+        let cat = Catalog { actions: vec!["info".into(), "reset".into()], ..Default::default() };
+        assert!(Action::Custom("  ".into()).validate(&cat).is_err());
+        assert!(Action::Custom("align".into()).validate(&cat).unwrap_err().contains("not a command"));
+        assert!(Action::Custom("gw info".into()).validate(&cat).is_ok());
+        assert_eq!(split_words("a 'b c' \"\" d"), vec!["a", "b c", "", "d"]);
+    }
+
     use super::*;
 
     fn s(v: Vec<OsString>) -> Vec<String> {

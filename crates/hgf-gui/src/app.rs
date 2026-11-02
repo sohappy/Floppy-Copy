@@ -3,6 +3,7 @@
 use crate::{theme, visualizer, widgets};
 use eframe::egui::{self, Color32, RichText, Ui};
 use egui_phosphor::regular as ph;
+use hgf_core::drivelimit::DriveType;
 use hgf_core::formats::{self, Catalog};
 use hgf_core::gw::*;
 use hgf_core::health::ScanStats;
@@ -44,6 +45,7 @@ pub enum Page {
     Reset,
     Update,
     Inspector,
+    Help,
     Settings,
 }
 
@@ -53,7 +55,7 @@ impl Page {
         ("DRIVE", &[Page::Health, Page::Rpm, Page::Align, Page::Seek, Page::Clean]),
         ("DEVICE", &[Page::Info, Page::Delays, Page::Pins, Page::Bandwidth, Page::Reset, Page::Update]),
         ("IMAGES", &[Page::Inspector]),
-        ("APP", &[Page::Settings]),
+        ("APP", &[Page::Help, Page::Settings]),
     ];
 
     pub fn icon(self) -> &'static str {
@@ -76,6 +78,7 @@ impl Page {
             Page::Reset => ph::ARROW_COUNTER_CLOCKWISE,
             Page::Update => ph::CLOUD_ARROW_DOWN,
             Page::Inspector => ph::FILE_MAGNIFYING_GLASS,
+            Page::Help => ph::QUESTION,
             Page::Settings => ph::GEAR,
         }
     }
@@ -100,8 +103,14 @@ impl Page {
             Page::Reset => "Reset device",
             Page::Update => "Firmware update",
             Page::Inspector => "Image inspector",
+            Page::Help => "Help",
             Page::Settings => "Settings",
         }
+    }
+
+    /// Pages for experts, hidden from the sidebar unless enabled in Settings.
+    pub fn expert(self) -> bool {
+        matches!(self, Page::Delays | Page::Pins)
     }
 
     pub fn color(self) -> Color32 {
@@ -134,6 +143,7 @@ impl Page {
             ActionKind::Bandwidth => Page::Bandwidth,
             ActionKind::Rpm => Page::Rpm,
             ActionKind::Align => Page::Align,
+            ActionKind::Custom => Page::Help,
         }
     }
 }
@@ -189,9 +199,25 @@ pub struct Settings {
     /// Ask for attention (taskbar / Dock) when an operation ends while the window is in the background.
     pub notify_done: bool,
     pub copy: crate::copy_ui::CopySettings,
+    /// Mechanical type of each drive (index = position in `Drive::ALL`).
+    pub drive_types: [DriveType; 6],
+    /// Show the pages for experts (drive delays, interface pins) in the sidebar.
+    pub expert_pages: bool,
+    /// Show the short explanation at the top of each page.
+    pub page_help: bool,
 }
 
 impl Settings {
+    pub fn drive_type(&self, d: Drive) -> DriveType {
+        let i = Drive::ALL.iter().position(|&x| x == d).unwrap_or(0);
+        self.drive_types[i]
+    }
+
+    pub fn set_drive_type(&mut self, d: Drive, t: DriveType) {
+        let i = Drive::ALL.iter().position(|&x| x == d).unwrap_or(0);
+        self.drive_types[i] = t;
+    }
+
     pub fn theme_choice(&self) -> theme::ThemeChoice {
         theme::ThemeChoice::from_settings(self.dark, self.follow_system)
     }
@@ -242,6 +268,9 @@ impl Default for Settings {
             log_dir: String::new(),
             notify_done: true,
             copy: Default::default(),
+            drive_types: Default::default(),
+            expert_pages: false,
+            page_help: true,
         }
     }
 }
@@ -277,6 +306,8 @@ impl Level {
 pub struct Console {
     lines: VecDeque<(String, Level)>,
     partial: Option<String>,
+    /// gw command typed in the console.
+    pub command: String,
     errors_only: bool,
     /// Lines of the running job, kept for the log file.
     job_log: Option<Vec<String>>,
@@ -384,7 +415,8 @@ pub struct App {
     /// State of the retro copier screen (not persisted).
     pub retro: crate::retro::RetroState,
     pub catalog: Catalog,
-    catalog_rx: Option<Receiver<Result<Catalog, String>>>,
+    /// Format list (or why it could not be read) and the commands of the installed gw.
+    catalog_rx: Option<Receiver<CatalogLoad>>,
     detect_rx: Option<Receiver<Option<String>>>,
     pub detecting: bool,
     pending_probe: bool,
@@ -521,9 +553,15 @@ impl App {
         let program = self.s.cfg.program.clone();
         let (tx, rx) = mpsc::channel();
         std::thread::spawn(move || {
-            let r = runner::capture(&program, &["read", "--help"], Duration::from_secs(20))
-                .and_then(|text| formats::parse_help(&text).ok_or_else(|| "unexpected gw output".into()));
-            let _ = tx.send(r);
+            let help = runner::capture(&program, &["read", "--help"], Duration::from_secs(20));
+            let optimised = !help.as_deref().is_ok_and(formats::optimised_missing);
+            let r =
+                help.and_then(|text| formats::parse_help(&text).ok_or_else(|| "unexpected gw output".into()));
+            // `gw --help` lists the commands this version has (align came with v1.21).
+            let actions = runner::capture(&program, &["--help"], Duration::from_secs(20))
+                .map(|usage| formats::parse_actions(&usage))
+                .unwrap_or_default();
+            let _ = tx.send((r, actions, optimised));
         });
         self.catalog_rx = Some(rx);
     }
@@ -555,8 +593,29 @@ impl App {
                 ));
             }
         }
-        let warnings = match action.validate(&self.catalog) {
+        let drive = extras.drive.unwrap_or(self.s.drive);
+        let limits = match hgf_core::drivelimit::apply(&mut action, self.s.drive_type(drive)) {
             Ok(w) => w,
+            Err(e) => {
+                self.notice = Some(format!("{}: {e}", drive.label()));
+                remove_temp(&extras);
+                return;
+            }
+        };
+        if let Some(f) = gcr_format(&action).filter(|f| self.catalog.lacks_optimised_for(f)) {
+            self.notice = Some(format!(
+                "{f} needs gw's compiled data routines, which this gw lacks (it reported \
+                 \"Optimised data routines not found\"). See Help → GCR disks, or reinstall the \
+                 Greaseweazle tools with a C compiler present."
+            ));
+            remove_temp(&extras);
+            return;
+        }
+        let warnings = match action.validate(&self.catalog) {
+            Ok(mut w) => {
+                w.extend(limits);
+                w
+            }
             Err(e) => {
                 self.notice = Some(e);
                 remove_temp(&extras);
@@ -605,11 +664,24 @@ impl App {
                 Action::Convert(o) => (MapMode::Read, o.format.clone()),
                 _ => (MapMode::Read, String::new()),
             };
+            // An explicit cylinder range (e.g. the c=0-39 of a 40-track drive) sets the rings shown.
+            let custom = match &action {
+                Action::Read(o) => o.tracks.custom.clone(),
+                Action::Write(o) => o.tracks.custom.clone(),
+                Action::Erase(o) => o.tracks.custom.clone(),
+                _ => String::new(),
+            };
             let geo = formats::PRESETS
                 .iter()
                 .find(|p| !fmt.is_empty() && p.format == fmt)
                 .map(|p| TrackSet::dense(p.cyls, p.heads))
                 .unwrap_or_else(|| TrackSet::dense(80, 2));
+            let geo = match TrackSet::parse(&custom) {
+                Ok(t) if custom.contains("c=") => {
+                    TrackSet { cyls: t.cyls, heads: if custom.contains("h=") { t.heads } else { geo.heads } }
+                }
+                _ => geo,
+            };
             self.map = DiskMap::new(mode, geo);
             self.map_page = page;
         }
@@ -700,7 +772,7 @@ impl App {
             }
         }
         if let Some(rx) = &self.catalog_rx {
-            if let Ok(r) = rx.try_recv() {
+            if let Ok((r, actions, optimised)) = rx.try_recv() {
                 self.catalog_rx = None;
                 match r {
                     Ok(c) => {
@@ -708,6 +780,15 @@ impl App {
                         self.catalog_error = None;
                     }
                     Err(e) => self.catalog_error = Some(e),
+                }
+                self.catalog.actions = actions;
+                self.catalog.optimised = optimised;
+                if !self.catalog.optimised {
+                    self.console.push(
+                        "WARNING: this gw lacks its compiled data routines: Apple II, Commodore \
+                         1541/1571 and Macintosh disks will not work (see Help → Known limits).",
+                        Level::Warn,
+                    );
                 }
             }
         }
@@ -944,7 +1025,9 @@ impl App {
 
     /// Page an operation belongs to (wizard steps stay on the health page).
     pub fn job_page(&self, kind: ActionKind) -> Page {
-        if self.health.pending.is_some() {
+        if kind == ActionKind::Custom {
+            self.s.page
+        } else if self.health.pending.is_some() {
             Page::Health
         } else if self.copy.pending.is_some() {
             Page::Copy
@@ -1008,6 +1091,7 @@ impl App {
                 self.pin_result.clone().map(|r| format!("{r}.")).unwrap_or_else(|| "Done.".into()),
             ),
             ActionKind::Update => (Level::Good, "Firmware updated.".into()),
+            ActionKind::Custom => (Level::Good, "Command finished.".into()),
         }
     }
 
@@ -1081,6 +1165,13 @@ impl App {
             {
                 self.s.retro.enabled = true;
             }
+            if ui
+                .selectable_label(self.s.page == Page::Help, format!("{}  Help", ph::QUESTION))
+                .on_hover_text("How Floppy-Copy works, the words it uses, more help")
+                .clicked()
+            {
+                self.s.page = Page::Help;
+            }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 let (txt, col) = match self.device.state {
                     DeviceState::Connected => {
@@ -1108,6 +1199,25 @@ impl App {
                     self.probe();
                 }
                 ui.add_space(8.0);
+                ui.add_enabled_ui(!busy, |ui| {
+                    let drive = self.s.drive;
+                    let mut t = self.s.drive_type(drive);
+                    egui::ComboBox::from_id_salt("drive_type")
+                        .selected_text(t.label())
+                        .show_ui(ui, |ui| {
+                            for k in DriveType::ALL {
+                                ui.selectable_value(&mut t, k, k.label()).on_hover_text(k.help());
+                            }
+                        })
+                        .response
+                        .on_hover_text(
+                            "Drive type of the selected drive. A 40-track drive (5.25\" DD, 3\") stops at \
+                             cylinder 39: commands that would go further are refused or limited.",
+                        );
+                    if t != self.s.drive_type(drive) {
+                        self.s.set_drive_type(drive, t);
+                    }
+                });
                 ui.add_enabled_ui(!busy, |ui| {
                     egui::ComboBox::from_id_salt("drive")
                         .selected_text(format!("{}  {}", ph::HARD_DRIVES, self.s.drive.label()))
@@ -1148,6 +1258,9 @@ impl App {
                     ui.label(RichText::new(*group).small().strong().color(theme::MUTED));
                     for &p in *pages {
                         let selected = self.s.page == p;
+                        if p.expert() && !self.s.expert_pages && !selected {
+                            continue;
+                        }
                         let mut text =
                             RichText::new(format!("{}  {}", p.icon(), p.title())).size(theme::fs(14.5));
                         if selected {
@@ -1203,6 +1316,32 @@ impl App {
         });
         if !self.s.show_console {
             return;
+        }
+        let mut run = false;
+        ui.horizontal(|ui| {
+            ui.label(RichText::new("gw").monospace().strong());
+            let w = (ui.available_width() - theme::w(90.0)).max(120.0);
+            let r = ui.add_enabled(
+                !self.busy(),
+                egui::TextEdit::singleline(&mut self.console.command)
+                    .hint_text("type a gw command, e.g. reset, info, rpm --nr 5 — Enter to run")
+                    .font(egui::TextStyle::Monospace)
+                    .desired_width(w),
+            );
+            if r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                run = true;
+            }
+            if ui
+                .add_enabled(!self.busy(), egui::Button::new(format!("{}  Run", ph::PLAY)))
+                .on_hover_text("Run the command; the selected drive and port are added unless typed")
+                .clicked()
+            {
+                run = true;
+            }
+        });
+        if run && !self.console.command.trim().is_empty() {
+            let text = self.console.command.trim().to_string();
+            self.request(Action::Custom(text));
         }
         let rows: Vec<&(String, Level)> = self
             .console
@@ -1332,6 +1471,7 @@ impl App {
             ActionKind::Delays => "Change drive delays?",
             ActionKind::Seek => "Seek to extreme cylinder?",
             ActionKind::PinSet => "Change pin level?",
+            ActionKind::Custom => "Run this gw command?",
             _ => "Overwrite file?",
         };
         let modal = egui::Modal::new(egui::Id::new("confirm")).show(ctx, |ui| {
@@ -1507,6 +1647,16 @@ impl App {
     }
 }
 
+/// Format of a disk command (read, write), for the GCR check.
+fn gcr_format(a: &Action) -> Option<&str> {
+    match a {
+        Action::Read(o) => Some(o.format.as_str()),
+        Action::Write(o) => Some(o.format.as_str()),
+        Action::Convert(o) => Some(o.format.as_str()),
+        _ => None,
+    }
+}
+
 fn confirm_details(a: &Action, drive: Drive, describe: Option<&str>) -> Vec<(String, String)> {
     let fmt = |f: &str| if f.is_empty() { "auto (from image)".to_string() } else { f.to_string() };
     match a {
@@ -1520,6 +1670,7 @@ fn confirm_details(a: &Action, drive: Drive, describe: Option<&str>) -> Vec<(Str
             ("Drive".into(), drive.label().into()),
             ("Tracks".into(), o.tracks.spec().unwrap_or_else(|| "all (c=0-81:h=0-1)".into())),
         ],
+        Action::Custom(t) => vec![("Command".into(), format!("gw {}", t.trim().trim_start_matches("gw ")))],
         Action::Clean(o) => vec![
             ("Drive".into(), drive.label().into()),
             ("Passes".into(), format!("{} × {} cylinders", o.passes, o.cyls)),
@@ -1547,6 +1698,9 @@ fn confirm_details(a: &Action, drive: Drive, describe: Option<&str>) -> Vec<(Str
 /// whatever folder the app was started from.
 /// How often eframe saves the settings (see `auto_save_interval`).
 pub const SAVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
+
+/// Background catalog load: format list (or why it failed), gw commands, compiled routines found.
+type CatalogLoad = (Result<Catalog, String>, Vec<String>, bool);
 
 /// Cached AmigaDOS analysis: path, size, modification time, result.
 pub type WriteAdf = (PathBuf, u64, Option<std::time::SystemTime>, Result<hgf_core::image::AdfInfo, String>);
@@ -1663,8 +1817,17 @@ impl eframe::App for App {
             ui.horizontal(|ui| {
                 ui.label(RichText::new(page.icon()).size(theme::fs(24.0)).color(page.color()));
                 ui.heading(RichText::new(page.title()).strong());
+                if page != Page::Help
+                    && ui
+                        .selectable_label(self.s.page_help, ph::QUESTION)
+                        .on_hover_text("Show or hide the explanation of this page")
+                        .clicked()
+                {
+                    self.s.page_help = !self.s.page_help;
+                }
             });
             ui.add_space(6.0);
+            self.page_help_banner(ui);
             self.status_area(ui);
             self.page(ui);
         });

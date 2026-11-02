@@ -12,7 +12,7 @@ pub fn show(ui: &mut Ui, map: &DiskMap, busy: bool) {
     let n = heads.len().max(1) as f32;
     let gap = 16.0;
     let avail = ui.available_size();
-    let legend_h = 110.0;
+    let legend_h = 130.0;
     // Side by side, or stacked when the column is narrow (large text, small window): whichever
     // gives the bigger discs. Never larger than the space available, so nothing is clipped.
     let fit = |w: f32, h: f32| w.min(h).clamp(0.0, 460.0);
@@ -103,6 +103,14 @@ fn disc(ui: &mut Ui, map: &DiskMap, head: u8, side: f32, busy: bool, dark: bool)
             let alpha = if busy { (150.0 + 100.0 * (t * 6.0).sin()) as u8 } else { 200 };
             painter.circle_stroke(c, r, Stroke::new((ring * 1.6).max(2.5), Color32::from_white_alpha(alpha)));
             let _ = h;
+            // Label the head ring, so that it is not mistaken for a disk feature.
+            let at = c + Vec2::angled(PI * 0.25) * r;
+            let font = FontId::proportional((side * 0.03).clamp(9.0, 12.0));
+            let text = format!("HEAD · C{cyl}");
+            let galley = painter.layout_no_wrap(text.clone(), font.clone(), Color32::BLACK);
+            let bg = egui::Rect::from_min_size(at + Vec2::new(4.0, 2.0), galley.size() + Vec2::new(6.0, 2.0));
+            painter.rect_filled(bg, 3.0, Color32::from_white_alpha(220));
+            painter.text(bg.center(), egui::Align2::CENTER_CENTER, text, font, Color32::BLACK);
         }
     }
 
@@ -193,6 +201,14 @@ fn legend(ui: &mut Ui, map: &DiskMap, dark: bool) {
             ui.label(RichText::new(format!("{good}/{total} sectors ({pct:.1}%)")).strong());
         }
     });
+    ui.label(
+        RichText::new(
+            "Outer ring = cylinder 0. The white ring is the track under the head (the last one read \
+             or written). Hover over a ring for its details.",
+        )
+        .small()
+        .color(theme::MUTED),
+    );
     if !map.geometry_known {
         ui.label(
             RichText::new("Geometry is provisional until gw reports the real track set.")

@@ -13,7 +13,7 @@
 <p align="center">
   Une interface graphique conviviale pour les outils <a href="https://github.com/keirf/greaseweazle">Greaseweazle</a> de lecture et d'écriture de disquettes.<br>
   Lire, écrire, copier, formater et diagnostiquer des disquettes — Amiga, PC, Atari ST, Commodore, Apple II, BBC Micro et bien d'autres.<br>
-  Windows · macOS · Linux — <b>v0.18.0</b> — © 2026 RCC(A)
+  Windows · macOS · Linux — <b>v0.19.0</b> — © 2026 RCC(A)
 </p>
 
 <p align="center">
@@ -51,8 +51,16 @@ pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
 * **Écran rétro de copieur** : un clic sur *Retro* transforme la fenêtre en copieur plein écran
   dans l'esprit des copieurs de disquettes classiques de l'Amiga — plaques métalliques, police
   pixel, voyants des lecteurs, une grille de pistes 0-79 par face, une ligne d'état.
+* **Protège les lecteurs 40 pistes** : indiquez qu'un lecteur est un 5,25" 40 pistes (360K) ou
+  un 3", et Floppy-Copy refuse ce qui enverrait la tête en butée (un format Amiga ou 720K, un
+  double pas, un déplacement au cylindre 79) et limite les lectures en flux et les effacements
+  aux cylindres 0-39.
+* **Aide intégrée** : une page *Help* (premiers pas, rôle de chaque page, glossaire, limites
+  connues des outils gw) et une courte explication en haut de chaque page.
+* **Taper n'importe quelle commande `gw`** dans la console (`reset`, `info`, `rpm --nr 5`…) ; le
+  lecteur choisi est ajouté automatiquement.
 * Thème sombre, clair ou celui du système ; taille du texte réglable ; la commande `gw` exacte
-  affichée avant d'être lancée (Read, Write, Convert, Erase).
+  affichée avant d'être lancée.
 
 ## Captures d'écran
 
@@ -62,8 +70,10 @@ pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
 | **Read disk** (interface classique) — une disquette Amiga usée, avec un conseil et *Re-read the failed tracks* | **Write disk** — avec la vérification de compatibilité Amiga |
 | <img src="docs/images/format.png" alt="Page Format, thème clair : une disquette Commodore 1541 formatée et vérifiée"> | <img src="docs/images/health.png" alt="Drive health : verdict Drive healthy, contrôles et carte de la disquette de référence"> |
 | **Format disk** — une disquette Commodore 1541 vierge, écrite et vérifiée (thème clair) | **Drive health** — contrôle guidé avec un verdict |
-| <img src="docs/images/rpm.png" alt="Drive RPM : 300,63 tr/min avec historique et statistiques"> | <img src="docs/images/inspector.png" alt="Image inspector affichant un volume AmigaDOS"> |
+| <img src="docs/images/rpm.png" alt="Drive RPM : 299,36 tr/min avec historique et statistiques"> | <img src="docs/images/inspector.png" alt="Image inspector affichant un volume AmigaDOS"> |
 | **Drive RPM** — vitesse, écart et historique | **Image inspector** — taille, SHA-256, explorateur AmigaDOS |
+| <img src="docs/images/help.png" alt="Page Help : premiers pas et rôle de chaque page"> | |
+| **Help** — premiers pas, pages, glossaire, limites connues | |
 
 ### Écran rétro de copieur
 
@@ -137,6 +147,9 @@ relance la recherche ; la variable d'environnement `FLOPPY_COPY_GW` impose un ch
      **Drive B** sur celui du milieu ;
    * lecteur PC sur nappe droite : **Drive B** ;
    * lecteur Amiga, Atari ou autre lecteur ancien (nappe droite) : **Unit 0** ou **Unit 1**.
+
+   À côté, choisissez le **type de lecteur** : *80 tracks* (3,5", 5,25" HD 1,2 Mo) ou
+   *40 tracks* (5,25" DD 360K, 3"). Un lecteur 40 pistes laissé sur 80 pistes peut aller en butée.
 3. **Vérifiez l'installation** avec *Drive health* et une disquette que vous savez bonne.
 4. **Lire une disquette** : choisissez le préréglage de la machine, le fichier de destination,
    puis *Read disk to image*. Les pistes rouges peuvent être relues avec *Re-read the failed
@@ -160,12 +173,15 @@ pour l'essayer avec un simulateur.
 | Drive health | `info` `rpm` `bandwidth` `read` `write` | contrôle guidé avec verdict et rapport copiable |
 | Drive RPM · Head alignment | `rpm` · `align` | mesures et graphiques en direct |
 | Seek head · Clean drive | `seek` · `clean` | confirmation pour les cylindres extrêmes, progression du nettoyage |
-| Device info · Drive delays · Interface pins · USB bandwidth | `info` `delays` `pin` `bandwidth` | informations et réglages du Greaseweazle |
+| Device info · USB bandwidth | `info` `bandwidth` | informations sur le Greaseweazle, test de la liaison USB |
+| Drive delays · Interface pins (pages expert, affichées depuis *Settings → Drives*) | `delays` `pin` | délais du lecteur à côté des valeurs d'usine, lecture des signaux (index, piste 0, protection) |
 | Reset device · Firmware update | `reset` `update` | fichier local, version GitHub, bootloader |
 | Image inspector | — | taille, SHA-256, format deviné, explorateur AmigaDOS |
+| Help | — | premiers pas, rôle de chaque page, glossaire, limites connues, liens vers le wiki |
 
 Et aussi : réglages enregistrés (modèles) sur Read et Write, la ligne de commande `gw` avec un
-bouton de copie sous les boutons d'action, un bouton *Stop* (ou `Échap`) pour toute opération en
+bouton de copie sous les boutons d'action, un champ dans la console pour taper n'importe quelle
+commande `gw`, un bouton *Stop* (ou `Échap`) pour toute opération en
 cours, une console avec un filtre *problems only*, le glisser-déposer des fichiers image, un
 journal facultatif, et une notification dans la barre des tâches ou le Dock quand une longue
 opération se termine en arrière-plan.
@@ -178,6 +194,9 @@ opération se termine en arrière-plan.
 | `Track 0 not found` | Mauvais choix de lecteur ou nappe mal orientée (broche 1 aux deux bouts). |
 | `Failed to verify Track …` | Disquette usée ou inadaptée (format DD sur disquette HD : masquez le trou de densité), têtes encrassées. Essayez une autre disquette, nettoyez les têtes, lancez *Drive health*. |
 | Vérifiée, mais illisible sur l'Amiga | Voir la carte *Amiga compatibility* de la page Write : option restée active (inversion des têtes, double pas…), image FFS sur Kickstart 1.3, disquette déjà utilisée. |
+| La tête cogne en bout de disque (lecteur 5,25" DD) | Le type de lecteur est *80 tracks* : choisissez *40 tracks* à côté du sélecteur de lecteur. |
+| `requires optimised C extension` (Apple II, Commodore 1541/1571, Mac) | gw a été installé sans ses routines compilées : utilisez la version Windows officielle, ou réinstallez les outils avec un compilateur C (voir *Help → Known limits*). |
+| *Head alignment* indisponible | `gw align` est arrivé avec les outils 1.21 : mettez-les à jour. |
 | `Permission denied` (Linux) | Ajoutez-vous au groupe `dialout`, puis déconnectez-vous et reconnectez-vous. |
 | macOS refuse d'ouvrir l'application | Clic droit → **Ouvrir** la première fois (l'application n'est pas notariée). |
 

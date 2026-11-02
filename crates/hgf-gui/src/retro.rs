@@ -164,7 +164,8 @@ impl RetroSettings {
             Side::One => ":h=1",
         };
         if whole && heads.is_empty() {
-            String::new()
+            // The preset's own tracks (e.g. one side, 40 cylinders for the CPC).
+            PRESETS.iter().find(|p| p.format == self.format).map(|p| p.tracks.to_string()).unwrap_or_default()
         } else {
             format!("c={}-{}{heads}", self.start, self.end)
         }
@@ -433,7 +434,13 @@ impl App {
             match label {
                 "SIDE" => self.s.retro.side = self.s.retro.side.next(back),
                 "FORMAT" => {
-                    let all: Vec<&str> = PRESETS.iter().map(|p| p.format).collect();
+                    let mut all: Vec<&str> = Vec::new();
+                    for p in PRESETS {
+                        // Flux presets share the empty format: one entry.
+                        if !all.contains(&p.format) {
+                            all.push(p.format);
+                        }
+                    }
                     let s = &mut self.s.retro;
                     s.format = cycle(&all, s.format.as_str(), back).to_string();
                     s.start = 0;

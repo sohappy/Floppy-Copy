@@ -2,6 +2,46 @@
 
 All notable changes to Floppy-Copy (formerly HappyGreaseFloppy, and FluxMyFluffyFloppy before that).
 
+## v0.19.0
+
+Changes after user testing (report of 29/10/2026).
+
+* **Drive type: 40 or 80 tracks**, chosen next to the drive selector (and for every drive in
+  *Settings → Drives*). On a 40-track drive (5.25" DD 360K, 3"), commands that would send the
+  head beyond cylinder 39 are refused with an explanation (e.g. an Amiga or 720K format, double
+  step, a seek to cylinder 79); raw flux reads, flux writes and erases are limited to cylinders
+  0-39. Before, *Erase disk* or an Amiga format on a 40-track drive drove the head into its end
+  stop. The cylinder counts come from gw's own disk definitions. The Format page shows why a
+  format does not fit the drive and greys out its button; the double-step option only appears for
+  80-track drives.
+* **Amstrad CPC**: new *Amstrad CPC (flux SCP)* preset (side 0, cylinders 0-39). The *Amstrad
+  CPC / +3 (scan)* preset now reads cylinders 0-39 of side 0 only: gw's `ibm.scan` format
+  defines 80 cylinders, which a CPC drive does not have. Presets now carry their own tracks.
+* **GCR disks** (Apple II, Commodore 1541/1571, Macintosh): when gw lacks its compiled data
+  routines ("Optimised data routines not found", "requires optimised C extension"), Floppy-Copy
+  says so at start-up, warns on the Read, Write and Format pages, refuses the command with an
+  explanation, and explains how to reinstall the host tools.
+* **Head alignment**: when the installed gw has no `align` command (added in host tools 1.21),
+  the page says so and links to the download page. gw's command list is read at start-up.
+* **Help**: a *Help* page (button in the top bar, entry in the sidebar) with getting started,
+  what each page is for, a glossary (image, flux, cylinder, TSPEC, double step…), the known
+  limits of the host tools and the wiki links; a short explanation at the top of every page
+  (the *?* next to the title hides it).
+* **gw commands in the console**: a field at the bottom of the console runs any gw command
+  (`reset`, `info`, `rpm --nr 5`…); the selected drive and port are added unless typed;
+  commands that change a disk or the device ask for confirmation.
+* Disk view: the white ring (track under the head) is labelled, and the legend explains it.
+* Seek head: the motor is on by default (many drives only step while it turns).
+* Reset device: what `gw reset` does is spelled out (it keeps the drive delays unless asked).
+* Drive delays: current values next to the firmware's factory values, with advice on when to
+  change them; the step delay default is the factory 10000 µs.
+* Interface pins: one-click reads of the index, track 0 and write-protect signals; which pins
+  each model can set.
+* Drive delays and Interface pins are expert pages, hidden from the sidebar unless *Settings →
+  Drives → Show the expert pages* is ticked.
+* The exact command is now shown under the buttons of Seek, Clean, Head alignment, Drive delays,
+  Interface pins and Reset as well, with the drive-type limits applied.
+
 ## v0.18.0
 
 * **Renamed Floppy-Copy — Retro Disk Copier**, © 2026 RCC(A). Window title, retro screen

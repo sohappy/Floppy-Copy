@@ -10,7 +10,7 @@ use eframe::egui::{self, RichText, Ui};
 use egui_phosphor::regular as ph;
 use hgf_core::amigados::{self, Filesystem};
 use hgf_core::fat12::{self, Kind, System};
-use hgf_core::gw::{Action, WriteOpts};
+use hgf_core::gw::{Action, Drive, WriteOpts};
 use hgf_core::{acorndfs, apple2, cbmdos};
 
 /// Machine the blank disk is for.
@@ -110,12 +110,28 @@ impl App {
                         };
                         if self.forty_tracks() {
                             ui.add_space(8.0);
+                            let forty_drive = self.s.drive_type(self.s.drive)
+                                == hgf_core::drivelimit::DriveType::Tracks40;
                             card(ui, ph::GEAR, "5.25\" drive", c, |ui| {
-                                ui.checkbox(&mut self.s.format_double_step, "80-track drive (PC 1.2M): double step")
+                                if forty_drive {
+                                    ui.label(
+                                        RichText::new(
+                                            "40-track drive (set in the top bar): the disk is written \
+                                             without double step.",
+                                        )
+                                        .small(),
+                                    );
+                                } else {
+                                    ui.checkbox(
+                                        &mut self.s.format_double_step,
+                                        "80-track drive (PC 1.2M): double step",
+                                    )
                                     .on_hover_text(
                                         "40-track disks need double stepping in an 80-track (96 tpi) drive. \
-                                         Leave off with a 40-track (360K) drive.",
+                                         Leave off with a 40-track (360K) drive, or better, set its type \
+                                         to 40 tracks in the top bar.",
                                     );
+                                }
                                 ui.label(
                                     RichText::new(
                                         "A 40-track disk written in an 80-track drive is best read back on the \
@@ -136,7 +152,23 @@ impl App {
                             .color(theme::MUTED),
                         );
                         ui.add_space(8.0);
-                        if widgets::action_button(ui, ph::SPARKLE, "FORMAT DISK", c, !busy && valid) {
+                        let mismatch = self.drive_mismatch(self.s.drive);
+                        if let Some(e) = &mismatch {
+                            ui.add(
+                                egui::Label::new(
+                                    RichText::new(format!("{}  {e}", ph::WARNING)).small().color(theme::BAD),
+                                )
+                                .wrap(),
+                            );
+                            ui.add_space(4.0);
+                        }
+                        if widgets::action_button(
+                            ui,
+                            ph::SPARKLE,
+                            "FORMAT DISK",
+                            c,
+                            !busy && valid && mismatch.is_none(),
+                        ) {
                             self.format_disk(None);
                         }
                         ui.add_space(4.0);
@@ -207,6 +239,38 @@ impl App {
     }
 
     /// Does the chosen disk have 40 tracks (double step option)?
+    /// gw format of the disk the page would create.
+    fn target_gw_format(&self) -> &'static str {
+        match self.s.format_machine {
+            Machine::Amiga => self.s.format.gw_format(),
+            Machine::Commodore => self.s.format_cbm.drive.gw_format(),
+            Machine::Bbc => self.s.format_dfs.gw_format(),
+            Machine::Apple2 => self.s.format_apple.os.gw_format(),
+            _ => self.s.format_fat.kind.layout().gw_format,
+        }
+    }
+
+    /// Why the disk cannot be formatted in `drive` (its type), if so.
+    fn drive_mismatch(&self, drive: Drive) -> Option<String> {
+        let dtype = self.s.drive_type(drive);
+        let mut a = Action::Write(WriteOpts {
+            format: self.target_gw_format().into(),
+            tracks: hgf_core::gw::TrackOpts {
+                double_step: self.double_step_for(drive),
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        hgf_core::drivelimit::apply(&mut a, dtype).err()
+    }
+
+    /// Double step: 40-track disk in an 80-track drive, when the box is ticked.
+    fn double_step_for(&self, drive: Drive) -> bool {
+        self.forty_tracks()
+            && self.s.format_double_step
+            && self.s.drive_type(drive) == hgf_core::drivelimit::DriveType::Tracks80
+    }
+
     fn forty_tracks(&self) -> bool {
         match self.s.format_machine {
             Machine::Commodore => self.s.format_cbm.drive.is_525(),
@@ -238,6 +302,7 @@ impl App {
                 ui,
                 &format!("{} blocks free  ·  gw format {}", o.drive.blocks_free(), o.drive.gw_format()),
             );
+            crate::widgets::gcr_warning(ui, &self.catalog, o.drive.gw_format());
         });
         ui.add_space(8.0);
         card(ui, ph::TEXT_AA, "Header", c, |ui| {
@@ -322,6 +387,7 @@ impl App {
                 ),
             );
             Self::muted(ui, "A data disk: boot DOS or ProDOS from another disk, then use this one.");
+            crate::widgets::gcr_warning(ui, &self.catalog, o.os.gw_format());
         });
         ui.add_space(8.0);
         card(ui, ph::TEXT_AA, "Volume", c, |ui| match o.os {
@@ -553,7 +619,7 @@ impl App {
     }
 
     /// Write the blank disk of the Format page, in `drive` (default: the selected one).
-    pub(crate) fn format_disk(&mut self, drive: Option<hgf_core::gw::Drive>) {
+    pub(crate) fn format_disk(&mut self, drive: Option<Drive>) {
         let b = match self.blank() {
             Ok(b) => b,
             Err(e) => return self.notice = Some(e),
@@ -570,7 +636,7 @@ impl App {
             _ => "an empty FAT12 disk",
         };
         let tracks = hgf_core::gw::TrackOpts {
-            double_step: self.forty_tracks() && self.s.format_double_step,
+            double_step: self.double_step_for(drive.unwrap_or(self.s.drive)),
             ..Default::default()
         };
         self.next = JobExtras {

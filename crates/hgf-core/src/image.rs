@@ -17,6 +17,8 @@ pub struct AdfInfo {
     pub filesystem: String,
     pub bootable: bool,
     pub boot_checksum_ok: bool,
+    /// The boot block holds boot code (bytes after the header are not all zero).
+    pub boot_code: bool,
     pub root_block: u32,
     /// Block type 2 (header) and secondary type 1 (root).
     pub root_valid: bool,
@@ -78,7 +80,8 @@ pub fn inspect_adf(data: &[u8]) -> Result<AdfInfo, String> {
     .to_string();
     let boot_checksum_ok = boot_checksum(&data[..1024]) == 0xffff_ffff;
     // A valid checksum is what makes Kickstart run the boot code.
-    let bootable = boot_checksum_ok && data[12..1024].iter().any(|&b| b != 0);
+    let boot_code = data[12..1024].iter().any(|&b| b != 0);
+    let bootable = boot_checksum_ok && boot_code;
     let root_block = (data.len() / 512 / 2) as u32;
     let root = &data[root_block as usize * 512..][..512];
     let root_valid = be32(root, 0) == 2 && be32(root, 508) == 1;
@@ -114,6 +117,7 @@ pub fn inspect_adf(data: &[u8]) -> Result<AdfInfo, String> {
         filesystem,
         bootable,
         boot_checksum_ok,
+        boot_code,
         root_block,
         root_valid,
         root_checksum_ok,

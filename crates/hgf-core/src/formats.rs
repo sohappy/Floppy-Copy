@@ -48,6 +48,11 @@ pub struct Catalog {
     pub suffixes: Vec<String>,
     /// `true` when the lists were read from the installed `gw`.
     pub from_gw: bool,
+    /// gw found its compiled ("optimised") data routines. Without them it cannot encode or
+    /// decode GCR disks: Apple II, Commodore and Macintosh.
+    pub optimised: bool,
+    /// Commands of the installed gw (`gw --help`); empty when unknown.
+    pub actions: Vec<String>,
 }
 
 impl Default for Catalog {
@@ -59,11 +64,23 @@ impl Default for Catalog {
                 .map(|s| s.trim_start_matches('.').to_string())
                 .collect(),
             from_gw: false,
+            optimised: true,
+            actions: Vec::new(),
         }
     }
 }
 
 impl Catalog {
+    /// `false` only when the installed gw is known to lack this command (e.g. `align` before v1.21).
+    pub fn has_action(&self, action: &str) -> bool {
+        self.actions.is_empty() || self.actions.iter().any(|a| a == action)
+    }
+
+    /// The format needs gw's compiled GCR routines, and gw reported them missing.
+    pub fn lacks_optimised_for(&self, format: &str) -> bool {
+        !self.optimised && needs_optimised(format)
+    }
+
     pub fn knows_format(&self, f: &str) -> bool {
         self.formats.iter().any(|x| x == f)
     }
@@ -125,7 +142,42 @@ pub fn parse_help(text: &str) -> Option<Catalog> {
         formats,
         suffixes: if suffixes.is_empty() { Catalog::default().suffixes } else { suffixes },
         from_gw: true,
+        optimised: !optimised_missing(text),
+        actions: Vec::new(),
     })
+}
+
+/// gw prints this warning when its compiled data routines are missing or disabled.
+pub fn optimised_missing(text: &str) -> bool {
+    text.contains("Optimised data routines not found") || text.contains("Optimised data routines disabled")
+}
+
+/// GCR formats, which gw handles only with its compiled ("optimised") routines.
+pub fn needs_optimised(format: &str) -> bool {
+    format.starts_with("apple2.")
+        || format.starts_with("mac.")
+        || ["commodore.1541", "commodore.1571"].contains(&format)
+}
+
+/// Command names listed by `gw --help` ("Actions:" section).
+pub fn parse_actions(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut inside = false;
+    for line in text.lines() {
+        if line.trim_start().starts_with("Actions:") {
+            inside = true;
+            continue;
+        }
+        if inside {
+            if !line.starts_with("  ") {
+                break;
+            }
+            if let Some(name) = line.split_whitespace().next() {
+                out.push(name.to_string());
+            }
+        }
+    }
+    out
 }
 
 /// Lower-case extension of a path, without the dot.
@@ -186,26 +238,86 @@ pub struct Preset {
     pub extension: &'static str,
     pub cyls: u16,
     pub heads: u8,
+    /// `--tracks` to use with this preset (empty = the format's own geometry).
+    pub tracks: &'static str,
 }
 
 pub const PRESETS: &[Preset] = &[
-    Preset { label: "Amiga DD 880K", format: "amiga.amigados", extension: "adf", cyls: 80, heads: 2 },
-    Preset { label: "Amiga HD 1.76M", format: "amiga.amigados_hd", extension: "adf", cyls: 80, heads: 2 },
-    Preset { label: "Atari ST 720K", format: "atarist.720", extension: "st", cyls: 80, heads: 2 },
-    Preset { label: "Atari ST 360K", format: "atarist.360", extension: "st", cyls: 80, heads: 1 },
-    Preset { label: "PC 1.44M", format: "ibm.1440", extension: "img", cyls: 80, heads: 2 },
-    Preset { label: "PC 720K", format: "ibm.720", extension: "img", cyls: 80, heads: 2 },
-    Preset { label: "PC 1.2M (5.25\")", format: "ibm.1200", extension: "img", cyls: 80, heads: 2 },
-    Preset { label: "PC 360K (5.25\")", format: "ibm.360", extension: "img", cyls: 40, heads: 2 },
-    Preset { label: "C64 1541", format: "commodore.1541", extension: "d64", cyls: 40, heads: 1 },
-    Preset { label: "C128 1571", format: "commodore.1571", extension: "d71", cyls: 40, heads: 2 },
-    Preset { label: "Commodore 1581", format: "commodore.1581", extension: "d81", cyls: 80, heads: 2 },
-    Preset { label: "Apple II DOS 3.3", format: "apple2.appledos.140", extension: "do", cyls: 35, heads: 1 },
-    Preset { label: "Mac 800K", format: "mac.800", extension: "img", cyls: 80, heads: 2 },
-    Preset { label: "BBC Micro DFS", format: "acorn.dfs.ss", extension: "ssd", cyls: 40, heads: 1 },
-    Preset { label: "Amstrad CPC / +3 (scan)", format: "ibm.scan", extension: "dsk", cyls: 40, heads: 1 },
-    Preset { label: "MSX 2DD", format: "msx.2dd", extension: "img", cyls: 80, heads: 2 },
-    Preset { label: "Flux (SCP)", format: "", extension: "scp", cyls: 82, heads: 2 },
+    Preset {
+        label: "Amiga DD 880K",
+        format: "amiga.amigados",
+        extension: "adf",
+        cyls: 80,
+        heads: 2,
+        tracks: "",
+    },
+    Preset {
+        label: "Amiga HD 1.76M",
+        format: "amiga.amigados_hd",
+        extension: "adf",
+        cyls: 80,
+        heads: 2,
+        tracks: "",
+    },
+    Preset { label: "Atari ST 720K", format: "atarist.720", extension: "st", cyls: 80, heads: 2, tracks: "" },
+    Preset { label: "Atari ST 360K", format: "atarist.360", extension: "st", cyls: 80, heads: 1, tracks: "" },
+    Preset { label: "PC 1.44M", format: "ibm.1440", extension: "img", cyls: 80, heads: 2, tracks: "" },
+    Preset { label: "PC 720K", format: "ibm.720", extension: "img", cyls: 80, heads: 2, tracks: "" },
+    Preset {
+        label: "PC 1.2M (5.25\")",
+        format: "ibm.1200",
+        extension: "img",
+        cyls: 80,
+        heads: 2,
+        tracks: "",
+    },
+    Preset { label: "PC 360K (5.25\")", format: "ibm.360", extension: "img", cyls: 40, heads: 2, tracks: "" },
+    Preset { label: "C64 1541", format: "commodore.1541", extension: "d64", cyls: 40, heads: 1, tracks: "" },
+    Preset { label: "C128 1571", format: "commodore.1571", extension: "d71", cyls: 40, heads: 2, tracks: "" },
+    Preset {
+        label: "Commodore 1581",
+        format: "commodore.1581",
+        extension: "d81",
+        cyls: 80,
+        heads: 2,
+        tracks: "",
+    },
+    Preset {
+        label: "Apple II DOS 3.3",
+        format: "apple2.appledos.140",
+        extension: "do",
+        cyls: 35,
+        heads: 1,
+        tracks: "",
+    },
+    Preset { label: "Mac 800K", format: "mac.800", extension: "img", cyls: 80, heads: 2, tracks: "" },
+    Preset {
+        label: "BBC Micro DFS",
+        format: "acorn.dfs.ss",
+        extension: "ssd",
+        cyls: 40,
+        heads: 1,
+        tracks: "",
+    },
+    Preset {
+        label: "Amstrad CPC / +3 (scan)",
+        format: "ibm.scan",
+        extension: "dsk",
+        cyls: 40,
+        heads: 1,
+        tracks: "c=0-39:h=0",
+    },
+    Preset { label: "MSX 2DD", format: "msx.2dd", extension: "img", cyls: 80, heads: 2, tracks: "" },
+    Preset { label: "Flux (SCP)", format: "", extension: "scp", cyls: 82, heads: 2, tracks: "" },
+    // After the generic flux preset, which lookups by format find first.
+    Preset {
+        label: "Amstrad CPC (flux SCP)",
+        format: "",
+        extension: "scp",
+        cyls: 40,
+        heads: 1,
+        tracks: "c=0-39:h=0",
+    },
 ];
 
 /// Guess a disk format from an image file's suffix and size.
@@ -273,6 +385,24 @@ mod tests {
         let c = parse_help(help).unwrap();
         assert_eq!(c.formats, vec!["amiga.amigados", "ibm.1440", "zx.opus.ss40"]);
         assert_eq!(c.suffixes, vec!["adf", "img", "scp"]);
+    }
+
+    #[test]
+    fn parses_actions_and_optimised_warning() {
+        let usage = "Usage: gw [--time] [action] [-h] ...\n  --time      Print elapsed time\nActions:\n  info        Display information\n  read        Read a disk\n  rpm         Measure RPM\n";
+        assert_eq!(parse_actions(usage), vec!["info", "read", "rpm"]);
+        let mut c = Catalog { actions: parse_actions(usage), ..Default::default() };
+        assert!(!c.has_action("align"));
+        assert!(c.has_action("read"));
+        c.actions.clear();
+        assert!(c.has_action("align"));
+        let help = "*** WARNING: Optimised data routines not found: Run scripts/setup.sh\nFORMAT options:\napple2.appledos.140\n\n";
+        let c = parse_help(help).unwrap();
+        assert!(!c.optimised);
+        assert!(c.lacks_optimised_for("apple2.prodos.140"));
+        assert!(c.lacks_optimised_for("commodore.1541"));
+        assert!(!c.lacks_optimised_for("commodore.1581"));
+        assert!(!c.lacks_optimised_for("amiga.amigados"));
     }
 
     #[test]

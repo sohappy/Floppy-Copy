@@ -13,7 +13,7 @@
 <p align="center">
   A friendly desktop front-end for the <a href="https://github.com/keirf/greaseweazle">Greaseweazle</a> floppy disk tools.<br>
   Read, write, copy, format and diagnose floppy disks — Amiga, PC, Atari ST, Commodore, Apple II, BBC Micro and more.<br>
-  Windows · macOS · Linux — <b>v0.18.0</b> — © 2026 RCC(A)
+  Windows · macOS · Linux — <b>v0.19.0</b> — © 2026 RCC(A)
 </p>
 
 <p align="center">
@@ -45,8 +45,14 @@ screen above, a classic interface gives access to every option.
 * **Retro copier screen**: one click on *Retro* turns the window into a full-screen copier in the
   spirit of the classic Amiga disk copiers — metal plates, pixel font, drive lamps, one 0-79 track
   grid per side, a status line.
-* Dark, light or system theme; adjustable text size; the exact `gw` command shown before it runs
-  (Read, Write, Convert, Erase).
+* **Protects 40-track drives**: tell Floppy-Copy that a drive is a 40-track 5.25" (360K) or 3"
+  drive, and it refuses what would send the head into its end stop (an Amiga or 720K format, a
+  double step, a seek to cylinder 79) and limits raw reads and erases to cylinders 0-39.
+* **Help built in**: a *Help* page (getting started, what each page is for, a glossary, known
+  limits of the host tools) and a short explanation at the top of every page.
+* **Type any `gw` command** in the console (`reset`, `info`, `rpm --nr 5`…); the selected drive
+  is added for you.
+* Dark, light or system theme; adjustable text size; the exact `gw` command shown before it runs.
 
 ## Screenshots
 
@@ -56,8 +62,10 @@ screen above, a classic interface gives access to every option.
 | **Read disk** (classic interface) — a worn Amiga disk, with a hint and *Re-read the failed tracks* | **Write disk** — with the Amiga compatibility check |
 | <img src="docs/images/format.png" alt="Format page, light theme: a Commodore 1541 disk formatted and verified"> | <img src="docs/images/health.png" alt="Drive health: verdict Drive healthy, checks and the reference disk map"> |
 | **Format disk** — a blank Commodore 1541 disk, written and verified (light theme) | **Drive health** — guided check with a verdict |
-| <img src="docs/images/rpm.png" alt="Drive RPM: 300.63 rpm with history chart and statistics"> | <img src="docs/images/inspector.png" alt="Image inspector showing an AmigaDOS volume"> |
+| <img src="docs/images/rpm.png" alt="Drive RPM: 299.36 rpm with history chart and statistics"> | <img src="docs/images/inspector.png" alt="Image inspector showing an AmigaDOS volume"> |
 | **Drive RPM** — speed, deviation and history | **Image inspector** — size, SHA-256, AmigaDOS explorer |
+| <img src="docs/images/help.png" alt="Help page: getting started and what each page is for"> | |
+| **Help** — getting started, pages, glossary, known limits | |
 
 ### Retro copier screen
 
@@ -129,6 +137,9 @@ again; the `FLOPPY_COPY_GW` environment variable forces a path.
      on the middle one;
    * PC drive on a straight cable: **Drive B**;
    * Amiga, Atari or other vintage drive (straight cable): **Unit 0** or **Unit 1**.
+
+   Next to it, choose the **drive type**: *80 tracks* (3.5", 5.25" HD 1.2M) or *40 tracks*
+   (5.25" DD 360K, 3"). With a 40-track drive set to 80 tracks, the head can hit its end stop.
 3. **Check the setup** with *Drive health* and a disk you know is good.
 4. **Read a disk**: pick the machine preset, the destination file, then *Read disk to image*. Red
    tracks can be read again with *Re-read the failed tracks*.
@@ -151,12 +162,14 @@ it against a simulator.
 | Drive health | `info` `rpm` `bandwidth` `read` `write` | guided check with a verdict and a copyable report |
 | Drive RPM · Head alignment | `rpm` · `align` | live readouts and charts |
 | Seek head · Clean drive | `seek` · `clean` | extreme-cylinder confirmation, cleaning progress |
-| Device info · Drive delays · Interface pins · USB bandwidth | `info` `delays` `pin` `bandwidth` | device details and settings |
+| Device info · USB bandwidth | `info` `bandwidth` | device details, USB link test |
+| Drive delays · Interface pins (expert pages, shown from *Settings → Drives*) | `delays` `pin` | drive timings next to the factory values, signal reads (index, track 0, write protect) |
 | Reset device · Firmware update | `reset` `update` | local file, GitHub tag, bootloader |
 | Image inspector | — | size, SHA-256, guessed format, AmigaDOS explorer |
+| Help | — | getting started, what each page is for, glossary, known limits, wiki links |
 
 Also: saved settings (templates) on Read and Write, the `gw` command line with a copy button
-under the action buttons, a *Stop* button (or `Esc`) for any running operation, a console with a
+under the action buttons, a field in the console to type any `gw` command, a *Stop* button (or `Esc`) for any running operation, a console with a
 *problems only* filter, drag and drop of image files, an optional log file, and a taskbar/Dock
 notification when a long operation ends in the background.
 
@@ -168,6 +181,9 @@ notification when a long operation ends in the background.
 | `Track 0 not found` | Wrong drive selection or cable orientation (pin 1 at both ends). |
 | `Failed to verify Track …` | Worn or wrong media (DD format on an HD disk: tape over the density hole), dirty heads. Try another disk, clean the heads, run *Drive health*. |
 | Verified, but the Amiga cannot read it | See the *Amiga compatibility* card on the Write page: options left on (swap heads, double step…), FFS image on Kickstart 1.3, reused disk. |
+| Head knocks at the end of the disk (5.25" DD drive) | The drive type is *80 tracks*: set it to *40 tracks* next to the drive selector. |
+| `requires optimised C extension` (Apple II, Commodore 1541/1571, Mac) | gw was installed without its compiled routines: use the official Windows release, or reinstall the host tools with a C compiler (see *Help → Known limits*). |
+| *Head alignment* not available | `gw align` came with host tools 1.21: update them. |
 | `Permission denied` (Linux) | Add yourself to the `dialout` group, then log out and back in. |
 | macOS refuses to open the app | Right-click → **Open** the first time (the app is not notarised). |
 

@@ -44,7 +44,22 @@ fn hint(title: &str, steps: &[&str], action: Option<HintAction>) -> Hint {
 pub fn for_failure(kind: ActionKind, message: &str) -> Option<Hint> {
     let m = message.to_lowercase();
     let writes = matches!(kind, ActionKind::Write | ActionKind::Erase);
-    let h = if m.contains("no index") {
+    let h = if m.contains("optimised c extension") || m.contains("optimised data routines") {
+        hint(
+            "This gw lacks its compiled data routines, which Apple II, Commodore 1541/1571 and \
+             Macintosh (GCR) disks need.",
+            &[
+                "Windows: use the official Greaseweazle release (gw.exe), which includes them.",
+                "macOS: install the compiler (xcode-select --install), then reinstall the host tools \
+                 as the Greaseweazle wiki explains (Download Host Tools).",
+                "Linux: install a compiler and the Python headers (Debian/Ubuntu: sudo apt install \
+                 build-essential python3-dev), then reinstall the host tools.",
+                "Check that the GW_OPT environment variable is not set to \"no\".",
+                "Other formats (Amiga, PC, Atari ST, Commodore 1581, BBC…) work without them.",
+            ],
+            Some(HintAction::OpenSettings),
+        )
+    } else if m.contains("no index") {
         hint(
             "The drive does not see the disk turning (no index pulse).",
             &[
@@ -239,6 +254,8 @@ mod tests {
         assert!(title(ActionKind::Info, "'/opt/gw' is not executable (permission denied).")
             .contains("cannot be run"));
         assert!(title(ActionKind::Write, "Could not find SPS/CAPS library").contains("IPF"));
+        assert!(title(ActionKind::Write, "Apple2 GCR requires optimised C extension").contains("compiled"));
+        assert!(title(ActionKind::Read, "Commodore GCR requires optimised C extension").contains("1541"));
         assert_eq!(for_failure(ActionKind::Read, "something else"), None);
         assert_eq!(for_failure(ActionKind::Write, "No Index").unwrap().action, Some(HintAction::OpenHealth));
     }
