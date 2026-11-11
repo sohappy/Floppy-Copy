@@ -304,8 +304,80 @@ impl DiskMap {
     }
 }
 
+/// Where one sector lies in a sector image.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SectorPlace {
+    pub offset: u64,
+    pub size: u64,
+}
+
+impl DiskMap {
+    /// Place of `sector` (index in gw's sector map) of a track in a sector image of `image_len`
+    /// bytes laid out as gw writes it: tracks in cylinder then side order, each track's sectors
+    /// in order. Needs gw's sector map for every track; the sector size is found from the image
+    /// length (D64 images may end with one error byte per sector).
+    pub fn sector_place(
+        &self,
+        image_len: u64,
+        cyl: u16,
+        head: u8,
+        sector: usize,
+    ) -> Result<SectorPlace, String> {
+        let mut before = None;
+        let mut total: u64 = 0;
+        for &c in &self.geometry.cyls {
+            for &h in &self.geometry.heads {
+                let n = self.get(c, h).sector_map.len() as u64;
+                if n == 0 {
+                    return Err(format!(
+                        "gw gave no sector map for track {c}.{h}: the layout of the image is unknown."
+                    ));
+                }
+                if (c, h) == (cyl, head) {
+                    if sector as u64 >= n {
+                        return Err(format!("Track {c}.{h} has {n} sectors."));
+                    }
+                    before = Some(total);
+                }
+                total += n;
+            }
+        }
+        let before = before.ok_or_else(|| format!("Track {cyl}.{head} is not part of this image."))?;
+        let size = [128u64, 256, 512, 1024, 2048, 4096]
+            .into_iter()
+            .find(|&s| total * s == image_len || total * s + total == image_len)
+            .ok_or_else(|| {
+                format!("The image size ({image_len} bytes) does not match the {total} sectors gw reported.")
+            })?;
+        Ok(SectorPlace { offset: (before + sector as u64) * size, size })
+    }
+}
+
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn sector_places_in_the_image() {
+        let mut m = DiskMap::new(MapMode::Read, TrackSet::dense(2, 2));
+        for c in 0..2u16 {
+            for h in 0..2u8 {
+                m.entry(c, h).sector_map = vec![Some(true); 11];
+            }
+        }
+        let p = m.sector_place(44 * 512, 1, 0, 3).unwrap();
+        assert_eq!(p, SectorPlace { offset: (22 + 3) * 512, size: 512 });
+        // D64-style error bytes after the data.
+        assert_eq!(
+            m.sector_place(44 * 256 + 44, 0, 1, 0).unwrap(),
+            SectorPlace { offset: 11 * 256, size: 256 }
+        );
+        assert!(m.sector_place(1000, 0, 0, 0).is_err());
+        assert!(m.sector_place(44 * 512, 0, 0, 11).is_err());
+        assert!(m.sector_place(44 * 512, 5, 0, 0).is_err());
+        m.entry(1, 1).sector_map.clear();
+        assert!(m.sector_place(44 * 512, 0, 0, 0).unwrap_err().contains("1.1"));
+    }
+
     use super::*;
     use crate::parse::OutputParser;
 

@@ -80,6 +80,8 @@ impl App {
                 widgets::format_picker(ui, "read_fmt", &mut o.format, &app.catalog, "None — raw flux only");
                 widgets::gcr_warning(ui, &app.catalog, &o.format);
             });
+            app.detect_controls(ui, Page::Read);
+            let o = &mut app.s.read;
             ui.add_space(8.0);
             card(ui, ph::FILE_ARROW_DOWN, "Output image", c, |ui| {
                 let quick = o.profile == ReadProfile::QuickScan;
@@ -280,6 +282,8 @@ impl App {
                         .color(theme::MUTED),
                 );
             });
+            app.detect_controls(ui, Page::Write);
+            let o = &mut app.s.write;
             ui.add_space(8.0);
             card(ui, ph::SLIDERS_HORIZONTAL, "Tracks & options", c, |ui| {
                 widgets::tracks(ui, &mut o.tracks);
@@ -412,6 +416,8 @@ impl App {
                 ui.add_space(4.0);
                 widgets::format_picker(ui, "conv_fmt", &mut o.format, &app.catalog, "Auto — from the images");
             });
+            app.detect_controls(ui, Page::Convert);
+            let o = &mut app.s.convert;
             ui.add_space(8.0);
             card(ui, ph::SLIDERS_HORIZONTAL, "Tracks & options", c, |ui| {
                 widgets::tracks(ui, &mut o.tracks);
@@ -563,8 +569,10 @@ impl App {
                         card(ui, ph::WARNING, "Not available with this gw", theme::WARN, |ui| {
                             ui.add(
                                 egui::Label::new(
-                                    "The installed Greaseweazle host tools have no 'align' command: it \
-                                     came with version 1.21. Update the host tools to use this page.",
+                                    "The installed Greaseweazle host tools have no 'align' command. No \
+                                     released version has it yet (1.23 lacks it): it is in the \
+                                     development version, installed with pip install \
+                                     git+https://github.com/keirf/greaseweazle.",
                                 )
                                 .wrap(),
                             );

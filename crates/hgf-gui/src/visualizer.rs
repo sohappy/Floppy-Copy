@@ -6,7 +6,9 @@ use eframe::egui::{self, Color32, FontId, Pos2, RichText, Sense, Shape, Stroke, 
 use hgf_core::{DiskMap, TrackState};
 use std::f32::consts::{PI, TAU};
 
-pub fn show(ui: &mut Ui, map: &DiskMap, busy: bool) {
+/// Draws the disk; returns the sector clicked (cylinder, side, sector index).
+pub fn show(ui: &mut Ui, map: &DiskMap, busy: bool) -> Option<(u16, u8, usize)> {
+    let mut hit = None;
     let dark = ui.visuals().dark_mode;
     let heads = map.geometry.heads.clone();
     let n = heads.len().max(1) as f32;
@@ -20,12 +22,14 @@ pub fn show(ui: &mut Ui, map: &DiskMap, busy: bool) {
     let column = fit(avail.x, (avail.y - legend_h - gap * (n - 1.0)) / n);
     let stacked = n > 1.0 && column > row * 1.15;
     let side = if stacked { column } else { row }.max(48.0).min(avail.x.max(48.0));
-    let discs = |ui: &mut Ui| {
+    let mut discs = |ui: &mut Ui| {
         for (i, &h) in heads.iter().enumerate() {
             if i > 0 {
                 ui.add_space(gap);
             }
-            disc(ui, map, h, side, busy, dark);
+            if let Some(x) = disc(ui, map, h, side, busy, dark) {
+                hit = Some(x);
+            }
         }
     };
     if stacked {
@@ -39,6 +43,7 @@ pub fn show(ui: &mut Ui, map: &DiskMap, busy: bool) {
     }
     ui.add_space(6.0);
     legend(ui, map, dark);
+    hit
 }
 
 fn arc_points(center: Pos2, r: f32, a0: f32, a1: f32) -> Vec<Pos2> {
@@ -51,8 +56,9 @@ fn arc_points(center: Pos2, r: f32, a0: f32, a1: f32) -> Vec<Pos2> {
         .collect()
 }
 
-fn disc(ui: &mut Ui, map: &DiskMap, head: u8, side: f32, busy: bool, dark: bool) {
-    let (rect, resp) = ui.allocate_exact_size(Vec2::splat(side), Sense::hover());
+fn disc(ui: &mut Ui, map: &DiskMap, head: u8, side: f32, busy: bool, dark: bool) -> Option<(u16, u8, usize)> {
+    let (rect, resp) = ui.allocate_exact_size(Vec2::splat(side), Sense::click());
+    let mut hit = None;
     let painter = ui.painter_at(rect);
     let c = rect.center();
     let outer = side * 0.47;
@@ -142,6 +148,10 @@ fn disc(ui: &mut Ui, map: &DiskMap, head: u8, side: f32, busy: bool, dark: bool)
             painter.circle_stroke(c, r, Stroke::new((ring * 1.3).max(2.0), Color32::from_white_alpha(120)));
             let t = map.get(cyl, head);
             let angle = ((pos - c).angle() - top).rem_euclid(TAU);
+            let n = t.sector_map.len();
+            if resp.clicked() && n > 0 {
+                hit = Some((cyl, head, (((angle / TAU) * n as f32) as usize).min(n - 1)));
+            }
             resp.on_hover_ui_at_pointer(|ui| {
                 ui.label(RichText::new(format!("Cylinder {cyl} · Side {head}")).strong());
                 ui.label(RichText::new(t.state.label()).color(theme::state_color(t.state, true)));
@@ -169,10 +179,12 @@ fn disc(ui: &mut Ui, map: &DiskMap, head: u8, side: f32, busy: bool, dark: bool)
                     if !bad.is_empty() {
                         ui.label(RichText::new(format!("Missing: {}", bad.join(", "))).color(theme::BAD));
                     }
+                    ui.label(RichText::new("Click to see the sector's bytes").small().color(theme::MUTED));
                 }
             });
         }
     }
+    hit
 }
 
 fn legend(ui: &mut Ui, map: &DiskMap, dark: bool) {

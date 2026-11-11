@@ -71,7 +71,7 @@ impl Default for Catalog {
 }
 
 impl Catalog {
-    /// `false` only when the installed gw is known to lack this command (e.g. `align` before v1.21).
+    /// `false` only when the installed gw is known to lack this command (e.g. `align`, not in any release up to 1.23).
     pub fn has_action(&self, action: &str) -> bool {
         self.actions.is_empty() || self.actions.iter().any(|a| a == action)
     }

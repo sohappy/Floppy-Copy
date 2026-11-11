@@ -8,7 +8,7 @@ cmd = a[0] if a else ''
 if __import__('os').environ.get('FAKE_LOG'):
     open(__import__('os').environ['FAKE_LOG'], 'a').write(' '.join(a) + '\n')
 if cmd in ('', '--help', '-h'):
-    # Same layout as the real `gw --help`; FAKE_OLD=1 mimics host tools older than 1.21 (no align).
+    # Same layout as the real `gw --help`; FAKE_OLD=1 mimics released host tools (up to 1.23: no align).
     acts = ['info', 'read', 'write', 'convert', 'erase', 'clean', 'seek', 'delays', 'update', 'pin',
             'reset', 'bandwidth', 'rpm'] + ([] if __import__('os').environ.get('FAKE_OLD') else ['align'])
     print('Usage: gw [--time] [action] [-h] ...\n  --time      Print elapsed time after action is executed\n'
@@ -45,6 +45,14 @@ def parse_set(x):
         lo, _, hi = part.partition('-')
         out += list(range(int(lo), int(hi or lo) + 1))
     return out
+if cmd == 'read' and __import__('os').environ.get('FAKE_FLUX') and '--format' not in a:
+    # A flux read (format detection): copy a real flux image, made with gw convert.
+    import shutil; shutil.copy(__import__('os').environ['FAKE_FLUX'], a[-1])
+    print("Reading c=0-2:h=0-1 revs=3")
+    for c in range(3):
+        for h in range(2):
+            print("T%d.%d: Raw Flux (78452 flux in 600.00ms)" % (c, h)); time.sleep(0.05)
+    sys.exit(0)
 if cmd == 'read':
     import os
     spec = a[a.index('--tracks') + 1] if '--tracks' in a else 'c=0-79:h=0-1'
@@ -87,7 +95,11 @@ if cmd == 'read':
     print("Found %d sectors of %d (%d%%)" % (good, tot, good*100/tot))
     out = a[-1]  # like gw, create the image (an ADF has a fixed size)
     if not os.path.exists(out) or '--no-clobber' not in a:
-        open(out, 'wb').write(bytes(901120 if out.lower().endswith('.adf') else 4096))
+        img = os.environ.get('FAKE_IMAGE')
+        if img and out.lower().endswith('.adf'):
+            __import__('shutil').copy(img, out)
+        else:
+            open(out, 'wb').write(bytes(901120 if out.lower().endswith('.adf') else 4096))
     sys.exit(0)
 
 def tracks(ds):

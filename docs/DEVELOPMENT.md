@@ -39,6 +39,27 @@ cargo build --release -p hgf-gui
 packaging/linux/install.sh                 # per-user install: program, menu entry, icons
 ```
 
+## Shipping the Greaseweazle host tools
+
+`packaging/bundle-gw.sh DIR` builds a self-contained gw in `DIR`: a relocatable Python
+(python-build-standalone, installed with [uv](https://docs.astral.sh/uv/)), gw installed into it
+with pip (its compiled data routines are checked: GCR disks need them) and a `gw` launcher.
+`BUNDLE_GW=1 packaging/package.sh <target>` puts it in the archive (`greaseweazle/` beside the
+program; inside `Floppy-Copy.app/Contents/Resources` on macOS, with one Python per processor,
+the Intel one run under Rosetta). On Windows (Git Bash) the official `gw.exe` release is added
+for the gw commands (with `GH_TOKEN` set for `gh`), the Python serving the format detection.
+`GREASEWEAZLE` chooses the version installed with pip (default `b209d70`, the April 2026
+development version, which has `gw align`), `GREASEWEAZLE_WIN` the Windows release (default
+`v1.23`). The release workflow does all this.
+
+## Format detection
+
+`crates/hgf-core/src/py/detect.py` runs with gw's own Python (found next to the shipped launcher,
+from a `gw` script's `#!` line, or beside a Windows `Scripts\gw.exe`) and decodes cylinder 0 of a
+flux image with every format, printing one JSON line per format; `detect.rs` ranks them. Without
+gw's Python, `gw convert --tracks c=0` runs once per format. `tests/detect_real_gw.rs` checks the
+whole chain against a real gw when one is installed (`pip install git+https://github.com/keirf/greaseweazle`).
+
 ## Trying it without hardware
 
 `tools/fake-gw.py` simulates every `gw` command with output copied from the real tools: a damaged
@@ -49,6 +70,7 @@ Amiga disk for `read`, a verify retry for `write`, live `align` reads, `clean` p
 FLOPPY_COPY_GW=$PWD/tools/fake-gw.py ./target/release/floppy-copy
 ```
 
+`FAKE_FLUX=file.scp` makes a raw flux read (format detection) copy that file, `FAKE_IMAGE=file.adf` makes an ADF read copy it.
 `FAKE_LOG=/tmp/gw.log` records every command line the application runs; `FAKE_VERIFY_FAIL=1`,
 `FAKE_NOINDEX=1` and `FAKE_DISK=erased` reproduce common failures.
 
@@ -79,8 +101,8 @@ reference implementations when these are installed (the tests are skipped otherw
 * `.github/workflows/ci.yml`: `fmt` and `clippy` on Linux, build and tests on Linux, Windows and
   macOS, on every push and pull request.
 * `.github/workflows/release.yml`: *Actions → Release → Run workflow* builds the three archives
-  as downloadable artifacts, without publishing anything. Pushing a tag such as `v0.19.0`
-  (`git tag v0.19.0 && git push origin v0.19.0`) also publishes them as a GitHub release:
+  as downloadable artifacts, without publishing anything. Pushing a tag such as `v0.20.0`
+  (`git tag v0.20.0 && git push origin v0.20.0`) also publishes them as a GitHub release:
   Windows x86_64 (with embedded icon), macOS universal `.app`, Linux x86_64 (built on
   Ubuntu 22.04 for broad glibc compatibility).
 

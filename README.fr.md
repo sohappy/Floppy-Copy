@@ -13,7 +13,7 @@
 <p align="center">
   Une interface graphique conviviale pour les outils <a href="https://github.com/keirf/greaseweazle">Greaseweazle</a> de lecture et d'écriture de disquettes.<br>
   Lire, écrire, copier, formater et diagnostiquer des disquettes — Amiga, PC, Atari ST, Commodore, Apple II, BBC Micro et bien d'autres.<br>
-  Windows · macOS · Linux — <b>v0.19.0</b> — © 2026 RCC(A)
+  Windows · macOS · Linux — <b>v0.20.0</b> — © 2026 RCC(A)
 </p>
 
 <p align="center">
@@ -54,6 +54,13 @@ pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
   aux cylindres 0-39.
 * **Aide intégrée** : une page *Help* (premiers pas, rôle de chaque page, glossaire, limites
   connues des outils gw) et une courte explication en haut de chaque page.
+* **Détecter le format** d'une disquette : Floppy-Copy lit les cylindres 0 à 2 et essaie tous les
+  formats que `gw` connaît, distingue les disquettes PC, Atari ST et MSX par leur secteur de
+  démarrage, et repère une disquette 40 pistes dans un lecteur 80 pistes (double pas réglé
+  automatiquement).
+* **Voir les octets d'un secteur** : un clic sur un secteur de la carte de la disquette, après
+  une lecture, une écriture ou une conversion.
+* **Rien d'autre à installer** : les archives fournissent les outils Greaseweazle.
 * **Taper n'importe quelle commande `gw`** dans la console (`reset`, `info`, `rpm --nr 5`…) ; le
   lecteur choisi est ajouté automatiquement.
 * Thème sombre, clair ou celui du système ; taille du texte réglable ; la commande `gw` exacte
@@ -66,6 +73,8 @@ pages et de boutons sont donnés ici tels qu'ils apparaissent à l'écran.
 
 | | |
 |---|---|
+| <img src="docs/images/detect.png" alt="Format détecté : une disquette PC 40 pistes lue dans un lecteur 80 pistes, double pas réglé"> | <img src="docs/images/sector.png" alt="Fenêtre des octets d'un secteur : hexadécimal et ASCII d'un secteur de l'image lue"> |
+| **Detect** — le format de la disquette, ici une disquette PC 40 pistes dans un lecteur 80 pistes | **Octets d'un secteur** — un clic sur un secteur de la carte |
 | <img src="docs/images/write.png" alt="Page Write avec la vérification de compatibilité Amiga"> | <img src="docs/images/format.png" alt="Page Format, thème clair : une disquette Commodore 1541 formatée et vérifiée"> |
 | **Write disk** — avec la vérification de compatibilité Amiga | **Format disk** — une disquette Commodore 1541 vierge, écrite et vérifiée (thème clair) |
 | <img src="docs/images/health.png" alt="Drive health : verdict Drive healthy, contrôles et carte de la disquette de référence"> | <img src="docs/images/rpm.png" alt="Drive RPM : 299,36 tr/min avec historique et statistiques"> |
@@ -103,15 +112,20 @@ Aucune version n'est publiée : le programme s'obtient de l'une de ces deux faç
   ci-dessous dans *Artifacts* (il faut être connecté à GitHub pour les télécharger). Rien n'est
   publié.
 
-Les archives contiennent :
+Les archives **incluent les outils Greaseweazle** (`gw` avec son propre Python et ses routines
+compilées, donc les disquettes GCR fonctionnent aussi) : rien d'autre à installer.
 
 | Système | Archive | Démarrage |
 |---|---|---|
-| Windows 10/11 | `…-windows-x86_64.zip` | Décompressez et lancez `Floppy-Copy.exe`. Décompressez la version officielle des outils Greaseweazle dans le même dossier : `gw` est alors trouvé automatiquement. |
-| macOS 11+ (Apple Silicon et Intel) | `…-macos-universal.zip` | Décompressez et placez `Floppy-Copy.app` dans Applications. L'application n'est pas notariée : la première fois, clic droit → **Ouvrir**. Installez `gw` avec `pip3 install greaseweazle`. |
-| Linux x86_64 | `…-linux-x86_64.tar.gz` | Extrayez et lancez `./install.sh` (pour l'utilisateur courant, ajoute une entrée de menu). Installez `gw` avec `pip install --user greaseweazle`, et ajoutez-vous au groupe `dialout` pour l'accès USB. |
+| Windows 10/11 | `…-windows-x86_64.zip` | Décompressez et lancez `Floppy-Copy.exe`. Le dossier `greaseweazle` à côté contient le `gw.exe` officiel (avec la bibliothèque CAPS pour les images IPF). |
+| macOS 11+ (Apple Silicon et Intel) | `…-macos-universal.zip` | Décompressez et placez `Floppy-Copy.app` dans Applications ; `gw` est à l'intérieur. L'application n'est pas notariée : la première fois, clic droit → **Ouvrir** (si macOS bloque encore : `xattr -dr com.apple.quarantine /Applications/Floppy-Copy.app`). |
+| Linux x86_64 | `…-linux-x86_64.tar.gz` | Extrayez et lancez `./install.sh` (pour l'utilisateur courant : entrée de menu, et copie de `gw` dans `~/.local/share/floppy-copy`). Ajoutez-vous au groupe `dialout` pour l'accès USB. |
 
-**`gw` est trouvé automatiquement** : chemin configuré, `PATH`, dossier du programme (et ses
+Le `gw` fourni est la version de développement d'avril 2026 (la 1.23 plus `gw align`) ; le
+`gw.exe` Windows est la version 1.23. Pour construire les archives avec ces outils :
+`BUNDLE_GW=1 packaging/package.sh …` (voir [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)).
+
+**`gw` est trouvé automatiquement** : les outils fournis d'abord, puis le chemin configuré, `PATH`, dossier du programme (et ses
 sous-dossiers `greaseweazle-*`), installations Python de l'utilisateur (`~/.local/bin`, pipx,
 `~/Library/Python/*/bin`, Homebrew) et, sous Windows, les dossiers `Scripts` de Python et les
 dossiers `greaseweazle-*` de Téléchargements, Bureau et Documents. *Settings → Auto-detect*
@@ -142,7 +156,7 @@ pour l'essayer avec un simulateur.
 
 | Page | Commande `gw` | Rôle |
 |---|---|---|
-| Read disk | `read` | préréglages, profils *Standard* / *Recovery* / *Quick scan*, toutes les options avancées (révolutions, essais, PLL, index simulé, disquette réversible, densité…), numérotation des disquettes, options de fichier image (HFE, SCP, KryoFlux) |
+| Read disk | `read` | préréglages, détection du format, octets d'un secteur au clic, profils *Standard* / *Recovery* / *Quick scan*, toutes les options avancées (révolutions, essais, PLL, index simulé, disquette réversible, densité…), numérotation des disquettes, options de fichier image (HFE, SCP, KryoFlux) |
 | Write disk | `write` | détection du format, contrôle de la taille, effacement préalable, essais de vérification, précompensation, vérification de compatibilité Amiga |
 | Copy disk | `read` + `write` | un ou deux lecteurs, copie en secteurs ou en flux, pistes source illisibles signalées avant l'écriture |
 | Format disk | `write` | disquettes vierges pour les ordinateurs ci-dessus ; double pas pour les disquettes 40 pistes dans un lecteur 80 pistes |
@@ -174,7 +188,7 @@ opération se termine en arrière-plan.
 | Vérifiée, mais illisible sur l'Amiga | Voir la carte *Amiga compatibility* de la page Write : option restée active (inversion des têtes, double pas…), image FFS sur Kickstart 1.3, disquette déjà utilisée. |
 | La tête cogne en bout de disque (lecteur 5,25" DD) | Le type de lecteur est *80 tracks* : choisissez *40 tracks* à côté du sélecteur de lecteur. |
 | `requires optimised C extension` (Apple II, Commodore 1541/1571, Mac) | gw a été installé sans ses routines compilées : utilisez la version Windows officielle, ou réinstallez les outils avec un compilateur C (voir *Help → Known limits*). |
-| *Head alignment* indisponible | `gw align` est arrivé avec les outils 1.21 : mettez-les à jour. |
+| *Head alignment* indisponible | `gw align` n'existe que dans la version de développement des outils (pas dans la 1.23) : `pip install git+https://github.com/keirf/greaseweazle`. |
 | `Permission denied` (Linux) | Ajoutez-vous au groupe `dialout`, puis déconnectez-vous et reconnectez-vous. |
 | macOS refuse d'ouvrir l'application | Clic droit → **Ouvrir** la première fois (l'application n'est pas notariée). |
 

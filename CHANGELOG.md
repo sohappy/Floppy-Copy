@@ -2,6 +2,35 @@
 
 All notable changes to Floppy-Copy (formerly HappyGreaseFloppy, and FluxMyFluffyFloppy before that).
 
+## v0.20.0
+
+* **Format detection** (*Detect*, under the format picker of Read disk): reads cylinders 0-2 as
+  flux, then decodes cylinder 0 with every format gw knows and keeps those that find every
+  sector, most sectors first. Formats with the same cylinder 0 (PC 720K, Atari ST 720K, MSX 2DD…)
+  are told apart by the boot sector (disk size from the BIOS parameter block, x86 jump, OEM
+  name). A 40-track disk read in an 80-track drive is recognised (cylinder 1 found where a double
+  step puts it), and double step is set. The best format is applied (with the image extension);
+  the others are listed, one click to use one. Write disk and Convert image detect the format of
+  a flux image the same way.
+  * Fast path: one Python process, gw's own decoders (`py/detect.py`), about 8 s for 140 formats.
+  * When gw's Python cannot be reached (the official Windows `gw.exe`), `gw convert` is run once
+    per format, several at a time: about 30 s.
+* **Sector bytes**: click a sector on the disk view after reading, writing or converting a sector
+  image (ADF, IMG, ST, D64…) to see its bytes (hex and ASCII) in the image, with Previous / Next
+  and a copy button. Missing sectors are shown as such (the image holds gw's filler).
+* **Greaseweazle host tools shipped with the archives** (`packaging/bundle-gw.sh`, used by the
+  release workflow): a relocatable Python (python-build-standalone) with gw and its compiled data
+  routines, so Apple II, Commodore 1541/1571 and Macintosh disks work out of the box, and nothing
+  else needs installing. Linux: `greaseweazle/` in the archive, copied by `install.sh`; macOS:
+  inside the application, one Python per processor; Windows: the official `gw.exe` release (with
+  the CAPS library) plus a Python for the fast detection. Floppy-Copy uses the shipped tools
+  first; *Settings* can still point to any other gw.
+* The shipped tools are the development version of April 2026 (`1.24.dev`, commit b209d70):
+  1.23 plus `gw align`, which no release has yet. Its "TEST/PRE-RELEASE" notice is shown as
+  information, not as a warning.
+* Corrected: `gw align` is not in host tools 1.21 or later as v0.19.0 said; no release has it
+  yet (1.23 lacks it).
+
 ## v0.19.0
 
 Changes after user testing (report of 29/10/2026).
@@ -21,7 +50,7 @@ Changes after user testing (report of 29/10/2026).
   routines ("Optimised data routines not found", "requires optimised C extension"), Floppy-Copy
   says so at start-up, warns on the Read, Write and Format pages, refuses the command with an
   explanation, and explains how to reinstall the host tools.
-* **Head alignment**: when the installed gw has no `align` command (added in host tools 1.21),
+* **Head alignment**: when the installed gw has no `align` command (only in the development version of the host tools, after 1.23),
   the page says so and links to the download page. gw's command list is read at start-up.
 * **Help**: a *Help* page (button in the top bar, entry in the sidebar) with getting started,
   what each page is for, a glossary (image, flux, cylinder, TSPEC, double step…), the known

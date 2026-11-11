@@ -29,24 +29,32 @@ pub fn candidates() -> Vec<PathBuf> {
         }
     };
 
-    // 1. On the PATH.
+    // 2. The host tools shipped with Floppy-Copy (`greaseweazle/gw` next to the program, or in
+    //    the Resources of the macOS application), then a gw next to the program, including an
+    //    unzipped release folder.
+    if let Some(dir) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
+        push(dir.join("greaseweazle").join(EXE));
+        push(dir.join("../Resources/greaseweazle").join(EXE));
+        push(dir.join(EXE));
+        // Linux: the archive's host tools copied by install.sh.
+        if let Some(h) = home_dir() {
+            push(h.join(".local/share/floppy-copy/greaseweazle").join(EXE));
+        }
+        for d in subdirs(&dir, "greaseweazle") {
+            push(d.join(EXE));
+        }
+    }
+
+    // 3. On the PATH.
     if let Some(path) = std::env::var_os("PATH") {
         for dir in std::env::split_paths(&path) {
             push(dir.join(EXE));
         }
     }
 
-    // 2. Next to Floppy-Copy (portable bundle), including an unzipped release folder.
-    if let Some(dir) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
-        push(dir.join(EXE));
-        for d in subdirs(&dir, "greaseweazle") {
-            push(d.join(EXE));
-        }
-    }
-
     let home = home_dir();
 
-    // 3. Python user installs.
+    // 4. Python user installs.
     if let Some(h) = &home {
         push(h.join(".local/bin").join(EXE));
         push(h.join(".local/pipx/venvs/greaseweazle/bin").join(EXE));
@@ -59,7 +67,7 @@ pub fn candidates() -> Vec<PathBuf> {
         push(Path::new(p).join(EXE));
     }
 
-    // 4. Windows: Python Scripts folders and the official zip unpacked in usual places.
+    // 5. Windows: Python Scripts folders and the official zip unpacked in usual places.
     #[cfg(windows)]
     {
         for var in ["LOCALAPPDATA", "APPDATA"] {
@@ -99,6 +107,24 @@ pub fn detect(preferred: &str) -> Option<String> {
         .filter(|p| p.is_file())
         .map(|p| p.to_string_lossy().into_owned())
         .find(|p| is_gw(p))
+}
+
+/// Full path of a program: as given when it names a file, otherwise searched on the PATH.
+pub fn resolve(program: &str) -> Option<PathBuf> {
+    let p = Path::new(program.trim());
+    if p.components().count() > 1 || p.is_absolute() {
+        return p.is_file().then(|| p.to_path_buf());
+    }
+    let path = std::env::var_os("PATH")?;
+    for dir in std::env::split_paths(&path) {
+        for name in [program.to_string(), format!("{program}.exe")] {
+            let c = dir.join(&name);
+            if c.is_file() {
+                return Some(c);
+            }
+        }
+    }
+    None
 }
 
 fn home_dir() -> Option<PathBuf> {

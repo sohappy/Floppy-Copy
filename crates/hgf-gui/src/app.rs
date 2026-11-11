@@ -412,6 +412,13 @@ pub struct App {
     /// An operation ended: ask the desktop for attention on the next frame.
     attention: bool,
     last_duration: Option<Duration>,
+    /// Format detection in progress, and the last result.
+    pub detect: Option<crate::detect_ui::DetectRun>,
+    pub detection: Option<crate::detect_ui::DetectionShown>,
+    pub detect_seq: u32,
+    /// Sector image behind the disk view (sector bytes on click), and the sector shown.
+    pub map_image: Option<PathBuf>,
+    pub sector_view: Option<crate::sector_ui::SectorView>,
     /// State of the retro copier screen (not persisted).
     pub retro: crate::retro::RetroState,
     pub catalog: Catalog,
@@ -498,6 +505,11 @@ impl App {
             attention: false,
             last_duration: None,
             retro: Default::default(),
+            detect: None,
+            detection: None,
+            detect_seq: 0,
+            map_image: None,
+            sector_view: None,
             confirm: None,
             outcome: None,
             notice: None,
@@ -527,7 +539,7 @@ impl App {
     }
 
     pub fn busy(&self) -> bool {
-        self.running.is_some()
+        self.running.is_some() || self.detect_decoding()
     }
 
     pub fn running_kind(&self) -> Option<ActionKind> {
@@ -557,7 +569,7 @@ impl App {
             let optimised = !help.as_deref().is_ok_and(formats::optimised_missing);
             let r =
                 help.and_then(|text| formats::parse_help(&text).ok_or_else(|| "unexpected gw output".into()));
-            // `gw --help` lists the commands this version has (align came with v1.21).
+            // `gw --help` lists the commands this version has (align is only in the development version, after 1.23).
             let actions = runner::capture(&program, &["--help"], Duration::from_secs(20))
                 .map(|usage| formats::parse_actions(&usage))
                 .unwrap_or_default();
@@ -684,6 +696,13 @@ impl App {
             };
             self.map = DiskMap::new(mode, geo);
             self.map_page = page;
+            self.sector_view = None;
+            self.map_image = match &action {
+                Action::Write(o) if !crate::detect_ui::is_flux_image(&o.input) && extras.temp.is_none() => {
+                    Some(o.input.clone())
+                }
+                _ => None,
+            };
         }
         match kind {
             ActionKind::Info => {
@@ -801,7 +820,7 @@ impl App {
                 }
             }
         }
-        let changed = !events.is_empty();
+        let changed = !events.is_empty() | self.poll_detect();
         for e in events {
             match e {
                 JobEvent::Line(l) => self.on_line(l),
@@ -824,8 +843,10 @@ impl App {
         } else {
             Level::Info
         };
+        // The development version of the host tools (shipped for `gw align`) says so on every
+        // command: informative, not a problem.
         if line.starts_with("*** TEST/PRE-RELEASE") || line.starts_with("*** Use these tools") {
-            level = Level::Warn;
+            level = Level::Info;
         }
         let failure = match &out {
             _ if fatal_message => Some(line.trim().to_string()),
@@ -964,6 +985,22 @@ impl App {
         } else {
             Some(Outcome { page: r.page, level, message: msg, hint: hint.clone() })
         };
+        if r.kind == ActionKind::Read {
+            self.detect_read_finished(success);
+        }
+        if success && !r.reread && self.health.pending.is_none() && self.copy.pending.is_none() {
+            // The sector image behind the disk view, for its sector bytes.
+            let sector_image = |p: &PathBuf| !crate::detect_ui::is_flux_image(p) && p.is_file();
+            match &r.action {
+                Action::Read(o) if o.profile != ReadProfile::QuickScan && !o.format.is_empty() => {
+                    self.map_image = r.output.clone().filter(sector_image);
+                }
+                Action::Convert(o) if !o.format.is_empty() => {
+                    self.map_image = r.output.clone().filter(sector_image);
+                }
+                _ => {}
+            }
+        }
         if let Some(check) = self.health.pending.take() {
             self.health_job_finished(check, success, cancelled, failure_text);
         } else if let Some(step) = self.copy.pending.take() {
@@ -1435,6 +1472,42 @@ impl App {
                 self.cancel();
             }
             ui.add_space(6.0);
+        } else if let Some(d) = self.detect.as_ref().filter(|d| d.stage == crate::detect_ui::Stage::Decoding)
+        {
+            let (p, text) =
+                (d.progress(), format!("{} / {} formats · {}", d.done, d.formats, fmt_secs(d.elapsed())));
+            let mut stop = false;
+            egui::Frame::new().fill(theme::tint(theme::ACTIVE, 22)).corner_radius(8).inner_margin(8).show(
+                ui,
+                |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(RichText::new("DETECTING").strong().color(theme::ACTIVE));
+                        let w = ui.available_width() - 110.0;
+                        ui.add_sized(
+                            [w, 22.0],
+                            egui::ProgressBar::new(p)
+                                .text(RichText::new(text).color(Color32::WHITE).strong())
+                                .fill(theme::READ),
+                        );
+                        stop = ui
+                            .add(
+                                egui::Button::new(
+                                    RichText::new(format!("{}  STOP", ph::STOP))
+                                        .strong()
+                                        .color(Color32::WHITE),
+                                )
+                                .fill(theme::BAD)
+                                .min_size(egui::vec2(theme::w(96.0), 26.0)),
+                            )
+                            .on_hover_text("Stop the detection (Esc)")
+                            .clicked();
+                    });
+                },
+            );
+            if stop || ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                self.detect_cancel();
+            }
+            ui.add_space(6.0);
         } else if let Some(o) = self.outcome.as_ref().filter(|o| o.page == self.s.page) {
             let (icon, col) = match o.level {
                 Level::Error => (ph::X_CIRCLE, theme::BAD),
@@ -1610,6 +1683,7 @@ impl App {
         if let Some(c) = self.confirm.take() {
             remove_temp(&c.extras);
         }
+        self.detect_cancel();
         // Temporary images held by a wizard waiting for the user (disk swap, review…).
         self.copy_cleanup();
         self.health_cleanup();
@@ -1637,10 +1711,14 @@ impl App {
         );
     }
 
-    pub fn visualizer(&self, ui: &mut Ui) {
+    pub fn visualizer(&mut self, ui: &mut Ui) {
         let busy = self.running_kind().is_some_and(ActionKind::uses_disk_map);
         if self.s.page == self.map_page {
-            visualizer::show(ui, &self.map, busy);
+            if let Some((c, h, s)) = visualizer::show(ui, &self.map, busy) {
+                if !busy {
+                    self.open_sector(c, h, s);
+                }
+            }
         } else {
             visualizer::show(ui, &DiskMap::default(), false);
         }
@@ -1777,7 +1855,7 @@ impl eframe::App for App {
                 egui::UserAttentionType::Informational,
             ));
         }
-        if self.busy() || self.catalog_rx.is_some() || self.detecting {
+        if self.busy() || self.catalog_rx.is_some() || self.detecting || self.detect.is_some() {
             ctx.request_repaint_after(Duration::from_millis(50));
         }
         self.handle_drops(&ctx);
@@ -1831,6 +1909,7 @@ impl eframe::App for App {
             self.status_area(ui);
             self.page(ui);
         });
+        self.sector_window(&ctx);
         self.confirm_dialog(&ctx);
         self.close_guard(&ctx);
         self.drop_overlay(&ctx);

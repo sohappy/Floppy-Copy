@@ -13,7 +13,7 @@
 <p align="center">
   A friendly desktop front-end for the <a href="https://github.com/keirf/greaseweazle">Greaseweazle</a> floppy disk tools.<br>
   Read, write, copy, format and diagnose floppy disks — Amiga, PC, Atari ST, Commodore, Apple II, BBC Micro and more.<br>
-  Windows · macOS · Linux — <b>v0.19.0</b> — © 2026 RCC(A)
+  Windows · macOS · Linux — <b>v0.20.0</b> — © 2026 RCC(A)
 </p>
 
 <p align="center">
@@ -47,6 +47,12 @@ spirit of the classic Amiga copiers, is also available: see [the end of this pag
   double step, a seek to cylinder 79) and limits raw reads and erases to cylinders 0-39.
 * **Help built in**: a *Help* page (getting started, what each page is for, a glossary, known
   limits of the host tools) and a short explanation at the top of every page.
+* **Detect the format** of a disk: Floppy-Copy reads cylinders 0-2 and tries every format `gw`
+  knows, tells PC, Atari ST and MSX disks apart by their boot sector, and spots a 40-track disk
+  in an 80-track drive (double step set for you).
+* **See a sector's bytes**: click a sector on the disk view after a read, a write or a
+  conversion.
+* **Nothing else to install**: the archives ship the Greaseweazle host tools.
 * **Type any `gw` command** in the console (`reset`, `info`, `rpm --nr 5`…); the selected drive
   is added for you.
 * Dark, light or system theme; adjustable text size; the exact `gw` command shown before it runs.
@@ -58,6 +64,8 @@ spirit of the classic Amiga copiers, is also available: see [the end of this pag
 
 | | |
 |---|---|
+| <img src="docs/images/detect.png" alt="Detected format: a 40-track PC disk read in an 80-track drive, double step set"> | <img src="docs/images/sector.png" alt="Sector bytes window: hex and ASCII of a sector of the image just read"> |
+| **Detect** — the format of the disk, here a 40-track PC disk in an 80-track drive | **Sector bytes** — click a sector of the disk view |
 | <img src="docs/images/write.png" alt="Write page with the Amiga compatibility check"> | <img src="docs/images/format.png" alt="Format page, light theme: a Commodore 1541 disk formatted and verified"> |
 | **Write disk** — with the Amiga compatibility check | **Format disk** — a blank Commodore 1541 disk, written and verified (light theme) |
 | <img src="docs/images/health.png" alt="Drive health: verdict Drive healthy, checks and the reference disk map"> | <img src="docs/images/rpm.png" alt="Drive RPM: 299.36 rpm with history chart and statistics"> |
@@ -94,15 +102,20 @@ No release is published: get the program in one of these two ways.
   run is finished (about 15 minutes), its page offers the three archives below under
   *Artifacts* (you must be signed in to GitHub to download them). Nothing is published.
 
-The archives contain:
+The archives **include the Greaseweazle host tools** (`gw` with its own Python and its compiled
+data routines, so GCR disks work too): nothing else needs installing.
 
 | System | Archive | How to start |
 |---|---|---|
-| Windows 10/11 | `…-windows-x86_64.zip` | Unzip and run `Floppy-Copy.exe`. Unzip the official Greaseweazle tools release in the same folder: `gw` is then found automatically. |
-| macOS 11+ (Apple Silicon and Intel) | `…-macos-universal.zip` | Unzip and move `Floppy-Copy.app` to Applications. The app is not notarised: the first time, right-click → **Open**. Install `gw` with `pip3 install greaseweazle`. |
-| Linux x86_64 | `…-linux-x86_64.tar.gz` | Extract and run `./install.sh` (current user, adds a menu entry). Install `gw` with `pip install --user greaseweazle`, and add yourself to the `dialout` group for USB access. |
+| Windows 10/11 | `…-windows-x86_64.zip` | Unzip and run `Floppy-Copy.exe`. The `greaseweazle` folder beside it holds the official `gw.exe` (with the CAPS library for IPF images). |
+| macOS 11+ (Apple Silicon and Intel) | `…-macos-universal.zip` | Unzip and move `Floppy-Copy.app` to Applications; `gw` is inside it. The app is not notarised: the first time, right-click → **Open** (if macOS still blocks it: `xattr -dr com.apple.quarantine /Applications/Floppy-Copy.app`). |
+| Linux x86_64 | `…-linux-x86_64.tar.gz` | Extract and run `./install.sh` (current user, adds a menu entry and copies `gw` to `~/.local/share/floppy-copy`). Add yourself to the `dialout` group for USB access. |
 
-**`gw` is found automatically**: configured path, `PATH`, the program's folder (and
+The shipped `gw` is the development version of April 2026 (1.23 plus `gw align`); the Windows
+`gw.exe` is release 1.23. To build the archives with these tools: `BUNDLE_GW=1
+packaging/package.sh …` (see [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)).
+
+**`gw` is found automatically**: the shipped tools first, then the configured path, `PATH`, the program's folder (and
 `greaseweazle-*` sub-folders), Python user installs (`~/.local/bin`, pipx,
 `~/Library/Python/*/bin`, Homebrew) and, on Windows, Python `Scripts` folders and
 `greaseweazle-*` folders in Downloads, Desktop and Documents. *Settings → Auto-detect* searches
@@ -132,7 +145,7 @@ it against a simulator.
 
 | Page | `gw` command | What it does |
 |---|---|---|
-| Read disk | `read` | presets, profiles *Standard* / *Recovery* / *Quick scan*, all advanced options (revs, retries, PLL, fake index, flippy, densel…), disk numbering, image file options (HFE, SCP, KryoFlux) |
+| Read disk | `read` | presets, format detection, sector bytes on click, profiles *Standard* / *Recovery* / *Quick scan*, all advanced options (revs, retries, PLL, fake index, flippy, densel…), disk numbering, image file options (HFE, SCP, KryoFlux) |
 | Write disk | `write` | format detection, size check, pre-erase, verify retries, precompensation, Amiga compatibility check |
 | Copy disk | `read` + `write` | one or two drives, sector or flux copy, bad source tracks reported before writing |
 | Format disk | `write` | blank disks for the computers above; double step for 40-track disks in 80-track drives |
@@ -162,7 +175,7 @@ notification when a long operation ends in the background.
 | Verified, but the Amiga cannot read it | See the *Amiga compatibility* card on the Write page: options left on (swap heads, double step…), FFS image on Kickstart 1.3, reused disk. |
 | Head knocks at the end of the disk (5.25" DD drive) | The drive type is *80 tracks*: set it to *40 tracks* next to the drive selector. |
 | `requires optimised C extension` (Apple II, Commodore 1541/1571, Mac) | gw was installed without its compiled routines: use the official Windows release, or reinstall the host tools with a C compiler (see *Help → Known limits*). |
-| *Head alignment* not available | `gw align` came with host tools 1.21: update them. |
+| *Head alignment* not available | `gw align` is only in the development version of the host tools (not in 1.23): `pip install git+https://github.com/keirf/greaseweazle`. |
 | `Permission denied` (Linux) | Add yourself to the `dialout` group, then log out and back in. |
 | macOS refuses to open the app | Right-click → **Open** the first time (the app is not notarised). |
 

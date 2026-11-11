@@ -5,11 +5,13 @@
 
 mod app;
 mod copy_ui;
+mod detect_ui;
 mod format_ui;
 mod health_ui;
 mod help;
 mod pages;
 mod retro;
+mod sector_ui;
 mod templates;
 mod theme;
 mod visualizer;

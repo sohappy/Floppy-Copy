@@ -13,6 +13,7 @@ pub mod amigados;
 pub mod apple2;
 pub mod cbmdos;
 pub mod compat;
+pub mod detect;
 pub mod diskmap;
 pub mod drivelimit;
 pub mod fat12;

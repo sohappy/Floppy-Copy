@@ -28,6 +28,14 @@ apps="$HOME/.local/share/applications"
 icons="$HOME/.local/share/icons/hicolor"
 mkdir -p "$bin" "$apps"
 install -m 755 "$src" "$bin/floppy-copy"
+# Greaseweazle host tools shipped in the archive (Python + gw).
+share="$HOME/.local/share/floppy-copy"
+if [ -d "$here/greaseweazle" ]; then
+  rm -rf "$share/greaseweazle"
+  mkdir -p "$share"
+  cp -a "$here/greaseweazle" "$share/greaseweazle"
+  echo "Greaseweazle host tools installed in $share/greaseweazle."
+fi
 for png in "$icondir"/*.png; do
   size="$(basename "$png" .png)"
   mkdir -p "$icons/${size}x${size}/apps"
@@ -47,7 +55,7 @@ fi
 command -v update-desktop-database > /dev/null && update-desktop-database "$apps" || true
 command -v gtk-update-icon-cache > /dev/null && gtk-update-icon-cache -q -t "$icons" || true
 echo "Installed. Start Floppy-Copy from your applications menu (icon included)."
-if ! command -v gw > /dev/null; then
+if ! command -v gw > /dev/null && [ ! -x "$share/greaseweazle/gw" ]; then
   echo "Note: the Greaseweazle tools (gw) were not found. Install them with: pip install --user greaseweazle"
 fi
 if ! groups | grep -qw dialout; then

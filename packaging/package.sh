@@ -15,6 +15,13 @@ add_licences() {
   cp crates/hgf-gui/assets/fonts/JetBrainsMono-OFL.txt crates/hgf-gui/assets/fonts/Silkscreen-OFL.txt THIRD-PARTY-LICENSES.txt "$1/"
 }
 
+# BUNDLE_GW=1: ship the Greaseweazle host tools (Python + gw, see bundle-gw.sh).
+bundle_gw() {
+  if [ "${BUNDLE_GW:-0}" = 1 ]; then
+    bash packaging/bundle-gw.sh "$@"
+  fi
+}
+
 case "$name" in
   linux-*)
     mkdir -p "$dir"
@@ -24,6 +31,7 @@ case "$name" in
     cp packaging/linux/floppy-copy.desktop packaging/linux/install.sh README.md README.fr.md "$dir/"
     chmod +x "$dir/floppy-copy" "$dir/install.sh"
     add_licences "$dir"
+    bundle_gw "$dir/greaseweazle"
     tar czf "dist/$dir.tar.gz" "$dir"
     ;;
   windows-*)
@@ -31,7 +39,8 @@ case "$name" in
     cp target/release/floppy-copy.exe "$dir/$app.exe"
     cp README.md README.fr.md "$dir/"
     add_licences "$dir"
-    cat > "$dir/GREASEWEAZLE.txt" <<'TXT'
+    bundle_gw "$dir/greaseweazle"
+    [ "${BUNDLE_GW:-0}" = 1 ] || cat > "$dir/GREASEWEAZLE.txt" <<'TXT'
 Floppy-Copy needs the Greaseweazle host tools (gw.exe).
 
 Easiest: unzip the official Windows release of the Greaseweazle tools
@@ -53,6 +62,9 @@ TXT
     cp "$bin" "$bundle/Contents/MacOS/$app"
     sed "s/@VERSION@/${version#v}/g" packaging/macos/Info.plist > "$bundle/Contents/Info.plist"
     cp packaging/icon.icns "$bundle/Contents/Resources/AppIcon.icns"
+    # One Python per processor: the launcher picks the one of the Mac it runs on.
+    bundle_gw "$bundle/Contents/Resources/greaseweazle" cpython-3.12-macos-aarch64-none python-arm64
+    bundle_gw "$bundle/Contents/Resources/greaseweazle" cpython-3.12-macos-x86_64-none python-x86_64
     cp README.md README.fr.md "$dir/"
     add_licences "$dir"
     ditto -c -k --keepParent "$dir" "dist/$dir.zip"

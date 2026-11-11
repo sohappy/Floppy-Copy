@@ -12,8 +12,9 @@ impl Page {
         match self {
             Page::Read => {
                 "Copies a floppy disk into an image file on this computer. Choose the computer the \
-                 disk comes from, the file to create, then READ. Red tracks could not be read: \
-                 re-read them with more retries. Hover over a ring of the disk for its details."
+                 disk comes from (or let Detect find its format), the file to create, then READ. Red \
+                 tracks could not be read: re-read them with more retries. Hover over a ring of the \
+                 disk for its details; click a sector to see its bytes."
             }
             Page::Write => {
                 "Writes an image file (ADF, IMG, ST, D64, SCP, HFE…) onto a floppy disk, then reads \
@@ -49,7 +50,8 @@ impl Page {
             Page::Align => {
                 "Reads the same track again and again while you adjust the drive's head: the bars \
                  show how many sectors decode on each read. Needs an alignment disk or a known-good \
-                 disk, and Greaseweazle host tools 1.21 or later (gw align)."
+                 disk, and host tools that have the gw align command: it is not in a released \
+                 version yet (1.23 lacks it), only in the development version on GitHub."
             }
             Page::Seek => {
                 "Moves the head to a cylinder and leaves it there, to test the stepper motor or \
@@ -166,6 +168,8 @@ impl App {
                     "Next to it, choose the drive type: 80 tracks (3.5\", 5.25\" HD) or 40 tracks \
                      (5.25\" DD, 3\"). A wrong type can send the head into its end stop.",
                     "Check everything with Drive health and a disk you know is good.",
+                    "Not sure of a disk's format? Detect (Read disk page) reads cylinders 0-2 and \
+                     tries every format gw knows.",
                     "Read a disk with Read disk, write one with Write disk, or use the Retro screen \
                      for quick disk-to-disk copies.",
                 ]
@@ -230,8 +234,16 @@ impl App {
                     ),
                     (
                         "Head alignment",
-                        "gw align exists since host tools 1.21. Older versions do not have it: \
-                         update the host tools (see the links below).",
+                        "gw align is not in any released version of the host tools yet (1.23 lacks \
+                         it): it is in the development version, installed with pip install \
+                         git+https://github.com/keirf/greaseweazle (needs a C compiler).",
+                    ),
+                    (
+                        "Format detection",
+                        "Fast with the host tools shipped with Floppy-Copy or installed with pip (one \
+                         Python process tries every format in a few seconds). With the official \
+                         Windows gw.exe alone, Floppy-Copy runs gw convert once per format: about \
+                         half a minute.",
                     ),
                     (
                         "IPF images",
